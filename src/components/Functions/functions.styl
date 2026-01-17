@@ -1,0 +1,56 @@
+.functions
+    height calc(100% - 5px)
+    background-color #212429
+    border-radius 6px
+    margin 5px 5px 0 5px
+    .actions
+      height 40px
+      line-height 40px
+      margin 10px 15px
+      .import-video
+        margin-right 10px
+        background-color rgba(255, 255, 255, .15)
+        &:hover
+          background-color rgba(255, 255, 255, .25)
+        &:active
+          background-color rgba(255, 255, 255, .35)
+      .new-cut-task
+        margin-right 10px
+    .import-video-list
+      background-color rgba(255, 255, 255, .15)
+      height calc(100% - 70px)
+      margin 0 15px 10px 15px
+      border-radius 22px
+      backdrop-filter blur(10px)
+      .import-block
+        float left
+        width 30%
+        height 110px
+        padding 10px
+        .view
+          height calc(100% - 20px)
+          display flex
+          justify-content center
+          background-color #000
+          cursor pointer
+          border 2px solid #000
+          position relative
+          &:hover
+            border-color #3c7eff
+            .add
+              display block
+          video
+            height 100%
+          .add
+            display none
+            position absolute
+            bottom 2px
+            right 2px
+        .file-name
+          height 20px
+          line-height 20px
+          text-align center
+          color #fff
+          text-overflow ellipsis
+          white-space nowrap
+          overflow hidden

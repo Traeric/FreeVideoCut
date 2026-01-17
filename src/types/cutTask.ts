@@ -1,0 +1,33 @@
+export interface CutTask {
+    id: number,
+    folderName: string,
+    createTime: string,
+}
+
+export interface ImportVideo {
+    id: number,
+    cutTaskId: number,
+    importName: string,
+    originalName: string,
+    createTime: string,
+    url?: string,
+}
+
+export interface VideoTrackInfo {
+    id?: number,
+    cutTaskId: number,
+    videoName: string,
+    display: 0,
+    thumbnail: string,
+    hasAudio?: number,
+    videoTime: number, // 单位秒
+    thumbnailList?: Array<{ url: string, width: number }>,
+    select?: boolean,
+    left?: number,
+    width?: number,
+}
+
+export interface VideoFrameInfo {
+    left: number,
+    timer: number,
+}

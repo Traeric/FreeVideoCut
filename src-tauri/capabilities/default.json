@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "dialog:default",
+    "fs:default",
+    "fs:allow-video-meta",
+    "fs:allow-write-file",
+    "opener:allow-open-path",
+    "sql:default",
+    "sql:allow-execute"
+  ]
+}

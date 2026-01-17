@@ -1,0 +1,33 @@
+import Database from "@tauri-apps/plugin-sql";
+import {invoke} from "@tauri-apps/api/core";
+
+export const QUERY_CUT_TASK = 'SELECT id, folder_name as folderName, create_time as createTime FROM cut_task';
+
+export const INSERT_CUT_TASK = 'INSERT INTO cut_task (folder_name) VALUES ($1)';
+
+export const INSERT_IMPORT_VIDEO = 'INSERT INTO import_video (cut_task_id, import_name, original_name) VALUES ($1, $2, $3)';
+
+export const SELECT_IMPORT_VIDEO = `
+    SELECT id, cut_task_id as cutTaskId, import_name as importName, original_name as originalName, create_time as createTime
+    FROM import_video
+    WHERE cut_task_id = $1
+`;
+
+export const INSERT_VIDEO_TRACK = 'INSERT INTO video_track (cut_task_id, video_name, thumbnail, video_time, display, has_audio) VALUES ($1, $2, $3, $4, $5, 1)';
+
+export const SELECT_VIDEO_TRACK = `
+    SELECT
+        id, cut_task_id as cutTaskId, video_name as videoName, display, thumbnail, has_audio as hasAudio, video_time as videoTime
+    FROM video_track
+    WHERE
+        cut_task_id = $1
+`;
+
+export const DELETE_VIDEO_TRACK = 'DELETE FROM video_track WHERE cut_task_id = $1';
+
+export async function executeDb(executeCallback: (db: Database) => any) {
+    const dbUrl = await invoke('get_db_url') as string;
+    const db = await Database.load(dbUrl);
+    await executeCallback(db);
+    await db.close(dbUrl);
+}

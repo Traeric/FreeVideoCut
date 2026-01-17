@@ -1,0 +1,79 @@
+.display
+  height calc(100% - 5px)
+  background-color #212429
+  border-radius 6px
+  margin 5px 5px 0 0
+  .video-player
+    width 70%
+    height calc(100% - 120px)
+    display flex
+    align-content center
+    justify-content center
+    background-color #000
+    margin 20px auto 0
+    video
+      height 100%
+  .play-area
+    display flex
+    height 60px
+    align-content center
+    .control
+      width 0
+      flex 0 0 120px
+      font-size 26px
+      color rgba(255, 255, 255, 0.5)
+      height 100%
+      display flex
+      align-items center
+      justify-content center
+      .icon
+        cursor pointer
+        margin-right 10px
+        &:hover
+          color #ff7d00
+        &.pause
+          color #ff7d00
+    .progress
+      flex 1
+      display flex
+      align-items center
+      .progress-line
+        width 100%
+        height 4px
+        background-color #333
+        border-radius 8px
+        cursor pointer
+        position relative
+        margin-right 15px
+        .passed
+          height 4px
+          border-radius 8px
+          background-color #ff7d00
+          width 0
+        .progress-bar
+          position absolute
+          top -10px
+          transition none
+          img
+            width 26px
+            height 26px
+            margin-left -13px
+    .time
+      width 0
+      flex 0 0 150px
+      text-align center
+      color rgba(255, 255, 255, .5)
+      line-height 60px
+      .played
+        color #ff7d00
+
+.volum-setting
+  display flex
+  width 200px
+  .setting
+    margin-right 10px
+
+    :deep(.arco-slider-bar)
+      background-color #ff7d00
+    :deep(.arco-slider-btn:after)
+      border-color #ff7d00 !important
