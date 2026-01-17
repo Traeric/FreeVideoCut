@@ -40,15 +40,17 @@
           text-align center
           background-color #212429
           height 100px
-          border-top 2px solid #0d0c0f
+          border-top 1px solid #0d0c0f
           &:last-child
-            border-bottom 2px solid #0d0c0f
+            border-bottom 1px solid #0d0c0f
           .icon
             font-size 25px
             margin-right 3px
           span
             font-size 14px !important
             vertical-align middle
+        .audio-title
+          height 60px
         .time-title
           height 35px
           border none
@@ -65,23 +67,39 @@
         height 100%
         .cut-track
           background-color #424549
-          border-top 2px solid #0d0c0f
+          border-top 1px solid #0d0c0f
           height 100px
           &:last-child
-            border-bottom 2px solid #0d0c0f
+            border-bottom 1px solid #0d0c0f
         .video-track
           display flex
           .single-track
+            display flex
             white-space nowrap
             cursor move
             position relative
-            img
-              height 98px
+            .thumbnail-border
+              height 100%
+              overflow hidden
+              &.last-thumbnail-border
+                padding-right 2px
+              .thumbnail-img
+                padding 2px 0
+                background-color rgba(255, 125, 0, .2)
+                &.first-thumbnail
+                  padding-left 3px
+                &.last-thumbnail
+                  padding-right 3px
+                img
+                  height calc(100px - 2px - 4px)
+                  width calc(100%)
             .select-frame
               position absolute
               top 0
               bottom 0
               border 2px solid #ff7d00
+        .audio-track
+          height 60px
         .video-frame-point
           position absolute
           top 0
@@ -106,6 +124,7 @@
         user-select none
         white-space nowrap
         height 35px
+        cursor pointer
         .time-unit
           display inline-block
           height 35px
@@ -124,10 +143,10 @@
             .cell
               border-right 1px solid rgba(255, 255, 255, .5)
               border-bottom 1px solid rgba(255, 255, 255, .5)
-              height 7px
+              height 6px
               width 0
               margin-right 8px
             .cell:first-child
               height 10px
             .cell:nth-child(6)
-              height 10px
+              height 8px

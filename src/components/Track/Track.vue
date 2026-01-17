@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {onMounted, onUnmounted, ref} from "vue";
-import { useTrack } from './track.ts';
+import { useTrack, useWheel } from './track.ts';
 
 const rightPanelEl = ref<HTMLDivElement>();
 const frameLineRef = ref<HTMLDivElement>();
@@ -10,11 +10,14 @@ const {
   cutTaskStore,
   moveFramePoint,
   selectVideoTrack,
-  selectFrameData,
   timeUtilCount,
   getFormatTime,
   selectFrameContextmenu,
+  trackTotalWith,
+  gotoClickTime,
 } = useTrack(rightPanelEl, frameLineRef);
+
+const { rightMouseWheel } = useWheel(rightPanelEl);
 
 onMounted(() => {
   document.addEventListener("click", removeSelectFrame);
@@ -29,7 +32,7 @@ onUnmounted(() => {
   <div class="track">
     <div class="actions">
       <div class="controls">
-        <div class="btn" @click="cutVideo">
+        <div class="track-controls btn" @click="cutVideo">
           <a-tooltip content="分割">
             <img src="../../assets/cut.svg" alt="NO IMG">
           </a-tooltip>
@@ -53,48 +56,43 @@ onUnmounted(() => {
           <icon-live-broadcast class="icon" />
           <span>视频轨</span>
         </div>
-        <div class="title">
+        <div class="title audio-title ">
           <icon-music class="icon" />
           <span>音频轨</span>
         </div>
       </div>
-      <div class="right" ref="rightPanelEl">
+      <div class="right track-right" ref="rightPanelEl" :style="{width: `${trackTotalWith}px`}" @wheel="rightMouseWheel">
         <div class="video-frame-point" :style="{left: `${cutTaskStore.videoFrameInfo.left}px`}">
           <div class="point-head" @mousedown="moveFramePoint">
             <img src="../../assets/video-frame-dot.svg" alt="NO IMG">
           </div>
           <div class="point-line" ref="frameLineRef"></div>
         </div>
-        <div class="time-track">
+        <div class="time-track" @click="gotoClickTime">
           <div class="time-unit" v-for="item in timeUtilCount">
             <div class="time-title">{{ getFormatTime(item - 1) }}</div>
             <div class="cells">
-              <div class="cell"></div>
-              <div class="cell"></div>
-              <div class="cell"></div>
-              <div class="cell"></div>
-              <div class="cell"></div>
-              <div class="cell"></div>
-              <div class="cell"></div>
-              <div class="cell"></div>
-              <div class="cell"></div>
-              <div class="cell"></div>
+              <div class="cell" v-for="_ in 10"></div>
             </div>
           </div>
         </div>
-        <div class="cut-track video-track">
+        <div class="cut-track video-track" :style="{width: `${trackTotalWith}px`}">
           <div class="single-track" @click="selectVideoTrack">
             <div class="select-frame"
-                 v-show="selectFrameData.show"
-                 :style="{left: `${selectFrameData.left}px`, width: `${selectFrameData.width}px`}"
+                 v-show="cutTaskStore.selectFrameData.show"
+                 :style="{left: `${cutTaskStore.selectFrameData.left}px`, width: `${cutTaskStore.selectFrameData.width}px`}"
                  @contextmenu="selectFrameContextmenu"
             ></div>
             <template v-for="thumbnail in cutTaskStore.getVideoThumbnail">
-              <img :src="thumbnail?.url" alt="NO IMG" :width="thumbnail?.width">
+              <div :class="{'thumbnail-border': true, 'last-thumbnail-border': thumbnail.last}" :style="{width: `${thumbnail?.width}px`}">
+                <div :class="{'thumbnail-img': true, 'first-thumbnail': thumbnail.first, 'last-thumbnail': thumbnail.last}">
+                  <img :src="thumbnail?.url" alt="NO IMG">
+                </div>
+              </div>
             </template>
           </div>
         </div>
-        <div class="cut-track"></div>
+        <div class="cut-track audio-track" :style="{width: `${trackTotalWith}px`}"></div>
       </div>
     </div>
   </div>

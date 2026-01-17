@@ -1,5 +1,5 @@
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
-import {computed, Ref, ref, h} from "vue";
+import {computed, Ref, h} from "vue";
 import {formatTime, timeStep, unitLength} from "../../utils/comonUtils.ts";
 import {Message} from "@arco-design/web-vue";
 import {invoke} from "@tauri-apps/api/core";
@@ -8,13 +8,6 @@ import ContextMenu from '@imengyu/vue3-context-menu';
 
 export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLineRef: Ref<HTMLDivElement | undefined>) => {
     const cutTaskStore = useCutTaskStore();
-    const selectFrameData: Record<string, any> = ref({
-        show: false,
-        width: 0,
-        left: 0,
-        track: null,
-        trackIndex: 0,
-    });
 
     // 计算需要多少个单元 5s一个单元
     const timeUtilCount = computed(() => {
@@ -24,6 +17,11 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
             totalTime += Number(track.videoTime);
         });
         return Math.ceil(totalTime / timeStep);
+    });
+
+    // 计算轨道总长度
+    const trackTotalWith = computed(() => {
+        return timeUtilCount.value * unitLength;
     });
 
     const getFormatTime = (currentUnit: number) => {
@@ -49,12 +47,24 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
         };
     };
 
+    const gotoClickTime = (e: MouseEvent) => {
+        e.preventDefault();
+        const progressLineRect = rightPanelEl.value?.getBoundingClientRect();
+        let left = e.clientX - progressLineRect!.x + rightPanelEl.value!.scrollLeft;
+        // 限制位置
+        left = Math.max(0, left);
+        left = Math.min(left, trackTotalWith.value);
+
+        cutTaskStore.videoFrameInfo.left = left;
+        cutTaskStore.setVideoTime(left);
+    };
+
     /**
      * 裁剪视频
      */
     const cutVideo = async () => {
-        const left = frameLineRef.value!.getBoundingClientRect().left - rightPanelEl.value!.getBoundingClientRect().left;
-        let seconds = left / unitLength * timeStep;
+        const left = (frameLineRef.value!.getBoundingClientRect().left + rightPanelEl.value!.scrollLeft) - rightPanelEl.value!.getBoundingClientRect().left;
+        let seconds = (left / unitLength) * timeStep;
         // 计算是第几个视频
         let cutVideoTrack = null;
         for (const track of cutTaskStore.videoTracks) {
@@ -110,7 +120,8 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
             newVideoTracks.push(track);
         }
 
-        cutTaskStore.updateVideoTracks(newVideoTracks);
+        const currentSelectIndex = cutTaskStore.videoTracks.findIndex(item => item.select);
+        await cutTaskStore.updateVideoTracks(newVideoTracks, currentSelectIndex);
     };
 
     /**
@@ -121,7 +132,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
     const selectVideoTrack = (e: MouseEvent) => {
         e.stopPropagation();
         const rightRect = rightPanelEl.value!.getBoundingClientRect();
-        const left = e.clientX - rightRect.x;
+        const left = (e.clientX + rightPanelEl.value!.scrollLeft) - rightRect.x;
         // 计算当前选中了哪个轨道
         const selectTrackIndex = cutTaskStore.videoTracks.findIndex(track => left > track.left! && left < track.left! + track.width!);
         const selectTrack = cutTaskStore.videoTracks[selectTrackIndex] as VideoTrackInfo;
@@ -129,17 +140,22 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
             Message.warning("无法选中轨道");
             return;
         }
-        selectFrameData.value.show = true;
-        selectFrameData.value.left = selectTrack.left!;
-        selectFrameData.value.width = selectTrack.width!;
-        selectFrameData.value.track = selectTrack;
-        selectFrameData.value.trackIndex = selectTrackIndex;
+
+        // 设置选中框信息
+        cutTaskStore.setSelectFrameData(selectTrackIndex);
     };
 
-    const removeSelectFrame = () => {
-        selectFrameData.value.show = false;
-        selectFrameData.value.left = 0;
-        selectFrameData.value.width = 0;
+    const removeSelectFrame = (e: MouseEvent) => {
+        const exceptClassName = ['import-block', 'video-frame-point', 'time-track', 'track-controls'];
+        let parentNode = e.target as any;
+        while (parentNode.tagName !== 'BODY') {
+            if (exceptClassName.some(name => parentNode.classList.contains(name))) {
+                return;
+            }
+            parentNode = parentNode.parentNode;
+        }
+
+        cutTaskStore.removeSelectFrame();
     };
 
     const selectFrameContextmenu = (e: MouseEvent) => {
@@ -161,12 +177,12 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
                     onClick: async () => {
                         await invoke('delete_video_track', {
                             workspace: cutTaskStore.currentCutTask!.folderName,
-                            videoTrackName: selectFrameData.value.track.videoName,
-                            thumbnail: selectFrameData.value.track.thumbnail,
+                            videoTrackName: cutTaskStore.selectFrameData.track.videoName,
+                            thumbnail: cutTaskStore.selectFrameData.track.thumbnail,
                         });
                         // 刷新数据
-                        cutTaskStore.videoTracks.splice(selectFrameData.value.trackIndex, 1);
-                        cutTaskStore.updateVideoTracks(cutTaskStore.videoTracks);
+                        cutTaskStore.videoTracks.splice(cutTaskStore.selectFrameData.trackIndex, 1);
+                        await cutTaskStore.updateVideoTracks(cutTaskStore.videoTracks);
                     }
                 },
             ]
@@ -179,9 +195,26 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
         cutTaskStore,
         moveFramePoint,
         selectVideoTrack,
-        selectFrameData,
         timeUtilCount,
         getFormatTime,
         selectFrameContextmenu,
+        trackTotalWith,
+        gotoClickTime,
     };
 };
+
+/**
+ * 滚轮事件
+ *
+ * @param rightPanelEl 右侧可滚动面板
+ */
+export const useWheel = (rightPanelEl: Ref<HTMLDivElement | undefined>) => {
+    const rightMouseWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        rightPanelEl.value!.scrollLeft += e.deltaY * 1.1;
+    };
+
+    return {
+        rightMouseWheel,
+    };
+}

@@ -15,11 +15,33 @@ export const useCutTaskStore = defineStore('cutTask', {
             currentCutTask: null as CutTask | null,
             displayUrl: "",
             videoFrameInfo: {} as VideoFrameInfo,
+            selectFrameData: {
+                show: false,
+                width: 0,
+                left: 0,
+                track: null,
+                trackIndex: 0,
+            } as Record<string, any>,
         };
     },
     getters: {
+        /**
+         * 获取所有视频轨道的缩略图集合
+         *
+         * @param state 当前state的变量
+         */
         getVideoThumbnail: (state) => {
-            return state.videoTracks.flatMap(track => track.thumbnailList);
+            let allThumbnails: any[] = [];
+            for (const track of state.videoTracks) {
+                const thumbnailList = track.thumbnailList! as any[];
+                if (!thumbnailList || !thumbnailList.length) {
+                    continue;
+                }
+                thumbnailList[0].first = true;
+                thumbnailList[thumbnailList.length - 1].last = true;
+                allThumbnails = [...allThumbnails, ...thumbnailList];
+            }
+            return allThumbnails;
         },
     },
     actions: {
@@ -55,14 +77,6 @@ export const useCutTaskStore = defineStore('cutTask', {
             const rootPath = await invoke("get_root_path");
             const displayUrl = `${rootPath}${this.currentCutTask!.folderName}\\final_video\\${finalVideoName}`;
             this.displayUrl = convertFileSrc(displayUrl) as string;
-
-            // 记录视频时间
-            // const currentTime = this.videoEl!.currentTime;
-            // this.videoEl?.load();
-            // this.videoEl!.addEventListener("loadedmetadata", () => {
-            //     debugger
-            //     this.videoEl!.currentTime = currentTime > this.videoEl!.duration ? this.videoEl!.duration : currentTime;
-            // });
         },
         refreshVideoFrame() {
             // 获取当前视频时长
@@ -76,7 +90,7 @@ export const useCutTaskStore = defineStore('cutTask', {
             // 计算时间
             this.videoEl!.currentTime = (left / unitLength) * timeStep;
         },
-        async updateVideoTracks(newVideoTracks: VideoTrackInfo[]) {
+        async updateVideoTracks(newVideoTracks: VideoTrackInfo[], selectIndex: number = -1) {
             await executeDb(async db => {
                 // 先删除已有的视频轨道
                 await db.execute(DELETE_VIDEO_TRACK, [this.currentCutTask!.id]);
@@ -94,6 +108,7 @@ export const useCutTaskStore = defineStore('cutTask', {
 
                 // 刷新track
                 await this.refreshVideoTrack();
+                this.setSelectFrameData(selectIndex);
 
                 // 生成最终的视频
                 invoke('synthesis_final_video', {
@@ -109,6 +124,29 @@ export const useCutTaskStore = defineStore('cutTask', {
                     this.refreshDisplayUrl();
                 });
             });
+        },
+        setSelectFrameData(selectTrackIndex: number) {
+            if (selectTrackIndex === -1) {
+                this.removeSelectFrame();
+                return;
+            }
+
+            const selectTrack = this.videoTracks[selectTrackIndex];
+            // 标记当前轨道被选中
+            this.videoTracks.forEach(track => track.select = false);
+            selectTrack.select = true;
+
+            this.selectFrameData.show = true;
+            this.selectFrameData.left = selectTrack.left!;
+            this.selectFrameData.width = selectTrack.width!;
+            this.selectFrameData.track = selectTrack;
+            this.selectFrameData.trackIndex = selectTrackIndex;
+        },
+        removeSelectFrame() {
+            this.videoTracks.forEach(track => track.select = false);
+            this.selectFrameData.show = false;
+            this.selectFrameData.left = 0;
+            this.selectFrameData.width = 0;
         }
     },
 });

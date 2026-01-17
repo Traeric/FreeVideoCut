@@ -84,3 +84,39 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+
+/* WebKit 内核浏览器（Chrome、Edge、Safari 等）滚动条样式 */
+/* 1. 滚动条整体容器 */
+.track-right::-webkit-scrollbar {
+  width: 8px; /* 垂直滚动条宽度 */
+  height: 8px; /* 水平滚动条高度 */
+}
+
+/* 2. 滚动条轨道（背景部分） */
+.track-right::-webkit-scrollbar-track {
+  background: rgba(255, 125, 0, .15); /* 轨道背景色，浅灰更柔和 */
+  border-radius: 4px; /* 轨道圆角，与滑块呼应 */
+  box-shadow: none;
+}
+
+/* 3. 滚动条滑块（可拖动的部分） */
+.track-right::-webkit-scrollbar-thumb {
+  /* 滑块基础样式 */
+  background-color: rgba(255, 125, 0, .5); /* 滑块默认颜色 */
+  border-radius: 4px; /* 滑块圆角，更圆润美观 */
+  border: none; /* 去除默认边框（如需留白可设置透明边框：1px solid transparent;） */
+
+  /* 可选：添加hover过渡动画，提升交互感 */
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* 4. 滑块hover状态（鼠标悬浮时） */
+.track-right::-webkit-scrollbar-thumb:hover {
+  background-color: #fd922c; /* 悬浮时加深颜色，提升反馈感 */
+}
+
+/* 5. 滑块active状态（鼠标按下拖动时） */
+.track-right::-webkit-scrollbar-thumb:active {
+  background-color: #ff7d00; /* 按下时进一步加深，增强交互层级 */
+}

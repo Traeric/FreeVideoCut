@@ -11,7 +11,7 @@ import {
   SELECT_IMPORT_VIDEO
 } from '../../utils/db.ts';
 import {onMounted, ref} from "vue";
-import {CutTask, ImportVideo} from "../../types/cutTask.ts";
+import {CutTask, ImportVideo, VideoTrackInfo} from "../../types/cutTask.ts";
 import Database from "@tauri-apps/plugin-sql";
 import { useCutTaskStore } from "../../store/cutTaskStore.ts";
 import {Message} from "@arco-design/web-vue";
@@ -65,37 +65,26 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
   if (selectIndex === -1) {
     selectIndex = 0;
   }
-  const curDisplay = cutTaskStore.videoTracks.length ? cutTaskStore.videoTracks[selectIndex].display + 1 : 0;
 
   const videoInfos = await invoke('add_video_in_track', {
     workspace: cutTaskStore.currentCutTask!.folderName,
     importName: videoInfo.importName,
-    display: curDisplay,
   }) as string;
 
   // 数据入库
   const videoInfoArr = videoInfos.split("|");
-  await executeDb(async (db: Database) => {
-    await db.execute(INSERT_VIDEO_TRACK, [cutTaskStore.currentCutTask!.id, `${videoInfoArr[0]}.mp4`, videoInfoArr[0], videoInfoArr[1], curDisplay]);
-    // TODO 更新排序
 
-    // 刷新track
-    await cutTaskStore.refreshVideoTrack();
+  const addVideo: VideoTrackInfo = {
+    cutTaskId: cutTaskStore.currentCutTask!.id,
+    videoName: `${videoInfoArr[0]}.mp4`,
+    thumbnail: String(videoInfoArr[0]),
+    videoTime: Number(videoInfoArr[1]),
+    display: 0
+  };
+  const newVideoTracks = cutTaskStore.videoTracks.slice(0);
+  newVideoTracks.splice(selectIndex, 0, addVideo);
 
-    // 生成最终的视频
-    invoke('synthesis_final_video', {
-      workspace: cutTaskStore.currentCutTask!.folderName,
-      videoTrackList: cutTaskStore.videoTracks.map(item => item.videoName),
-    }).then(finalVideoName => {
-      if ("bad path" === finalVideoName) {
-        Message.error("合成视频出错");
-        return;
-      }
-      localStorage.setItem("finalVideoName", finalVideoName as string);
-
-      cutTaskStore.refreshDisplayUrl();
-    });
-  });
+  await cutTaskStore.updateVideoTracks(newVideoTracks, selectIndex);
 };
 
 onMounted(async () => {
