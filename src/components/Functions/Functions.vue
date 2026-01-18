@@ -2,19 +2,11 @@
 import {open} from "@tauri-apps/plugin-dialog";
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
 import {getUUid} from '../../utils/comonUtils.ts';
-import {
-  executeDb,
-  INSERT_CUT_TASK,
-  INSERT_IMPORT_VIDEO,
-  INSERT_VIDEO_TRACK,
-  QUERY_CUT_TASK,
-  SELECT_IMPORT_VIDEO
-} from '../../utils/db.ts';
+import {executeDb, INSERT_CUT_TASK, INSERT_IMPORT_VIDEO, QUERY_CUT_TASK, SELECT_IMPORT_VIDEO} from '../../utils/db.ts';
 import {onMounted, ref} from "vue";
 import {CutTask, ImportVideo, VideoTrackInfo} from "../../types/cutTask.ts";
 import Database from "@tauri-apps/plugin-sql";
-import { useCutTaskStore } from "../../store/cutTaskStore.ts";
-import {Message} from "@arco-design/web-vue";
+import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 
 
 const cutTaskList = ref<CutTask[]>([]);
@@ -66,25 +58,25 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
     selectIndex = 0;
   }
 
-  const videoInfos = await invoke('add_video_in_track', {
+  invoke('add_video_in_track', {
     workspace: cutTaskStore.currentCutTask!.folderName,
     importName: videoInfo.importName,
-  }) as string;
+  }).then(async (res) => {
+    const videoInfos = res as string;
 
-  // 数据入库
-  const videoInfoArr = videoInfos.split("|");
+    const videoInfoArr = videoInfos.split("|");
+    const addVideo: VideoTrackInfo = {
+      cutTaskId: cutTaskStore.currentCutTask!.id,
+      videoName: `${videoInfoArr[0]}.mp4`,
+      thumbnail: String(videoInfoArr[0]),
+      videoTime: Number(videoInfoArr[1]),
+      display: 0
+    };
+    const newVideoTracks = cutTaskStore.videoTracks.slice(0);
+    newVideoTracks.splice(selectIndex, 0, addVideo);
 
-  const addVideo: VideoTrackInfo = {
-    cutTaskId: cutTaskStore.currentCutTask!.id,
-    videoName: `${videoInfoArr[0]}.mp4`,
-    thumbnail: String(videoInfoArr[0]),
-    videoTime: Number(videoInfoArr[1]),
-    display: 0
-  };
-  const newVideoTracks = cutTaskStore.videoTracks.slice(0);
-  newVideoTracks.splice(selectIndex, 0, addVideo);
-
-  await cutTaskStore.updateVideoTracks(newVideoTracks, selectIndex);
+    await cutTaskStore.updateVideoTracks(newVideoTracks, selectIndex);
+  });
 };
 
 onMounted(async () => {

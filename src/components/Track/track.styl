@@ -9,6 +9,7 @@
     .actions
       height: 50px
       padding-left 90px
+      display flex
       .controls
         height 100%
         display flex
@@ -82,7 +83,7 @@
               height 100%
               overflow hidden
               &.last-thumbnail-border
-                padding-right 2px
+                padding-right 3px
               .thumbnail-img
                 padding 2px 0
                 background-color rgba(255, 125, 0, .2)
@@ -93,6 +94,10 @@
                 img
                   height calc(100px - 2px - 4px)
                   width calc(100%)
+            .thumbnail-placeholder
+              height 100%
+              background-color rgba(255, 125, 0, .2)
+              margin-left 2px
             .select-frame
               position absolute
               top 0

@@ -35,6 +35,10 @@ export const useCutTaskStore = defineStore('cutTask', {
             for (const track of state.videoTracks) {
                 const thumbnailList = track.thumbnailList! as any[];
                 if (!thumbnailList || !thumbnailList.length) {
+                    allThumbnails.push({
+                        placeholder: true,
+                        width: track.videoTime / timeStep * unitLength,
+                    });
                     continue;
                 }
                 thumbnailList[0].first = true;
@@ -48,6 +52,8 @@ export const useCutTaskStore = defineStore('cutTask', {
         async refreshVideoTrack() {
             // 获取视频轨道的数据
             await executeDb(async (db: Database) => {
+                // 先取消缩略图获取的定时器
+                this.videoTracks.forEach(track => clearInterval(track.thumbnailGetTimer));
                 this.videoTracks = await db.select(SELECT_VIDEO_TRACK, [this.currentCutTask!.id]) as VideoTrackInfo[];
             });
 
@@ -65,11 +71,27 @@ export const useCutTaskStore = defineStore('cutTask', {
 
             // 转换图片url
             for (const videoTrack of this.videoTracks) {
-                const thumbNameList = await invoke('get_thumbnail', { workspace: this.currentCutTask!.folderName, thumbnail: videoTrack.thumbnail }) as string[];
-                videoTrack.thumbnailList = thumbNameList.map(item => ({
-                    url: convertFileSrc(item),
-                    width: videoTrack.width! / thumbNameList.length,
-                }));
+                let count = 0;
+                let currentThumbnailCount = 0;
+                videoTrack.thumbnailGetTimer = setInterval(async () => {
+                    const thumbNameList = await invoke('get_thumbnail', { workspace: this.currentCutTask!.folderName, thumbnail: videoTrack.thumbnail }) as string[];
+                    if (thumbNameList.length === currentThumbnailCount) {
+                        if (count > 5) {
+                            videoTrack.thumbnailList = thumbNameList.map(item => ({
+                                url: convertFileSrc(item),
+                                width: videoTrack.width! / thumbNameList.length,
+                            }));
+
+                            clearInterval(videoTrack.thumbnailGetTimer);
+                            return;
+                        }
+                        count++;
+                        return;
+                    }
+
+                    currentThumbnailCount = thumbNameList.length;
+                    count = 0;
+                }, 50);
             }
         },
         async refreshDisplayUrl() {

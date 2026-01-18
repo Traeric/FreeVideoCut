@@ -25,6 +25,7 @@ export interface VideoTrackInfo {
     select?: boolean,
     left?: number,
     width?: number,
+    thumbnailGetTimer?: number,
 }
 
 export interface VideoFrameInfo {

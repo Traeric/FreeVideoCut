@@ -102,7 +102,9 @@ pub fn add_video_in_track(app_handle: AppHandle, workspace: &str, import_name: &
     }
 
     // 生成视频缩略图
-    generate_thumbnail(&app_handle, dest_path.as_str(), thumbnail_dir);
+    std::thread::spawn(move || {
+        generate_thumbnail(&app_handle, dest_path.as_str(), thumbnail_dir);
+    });
 
     format!("{}|{}", track_video_name_suffix, video_time)
 
@@ -195,11 +197,15 @@ pub fn cut_video(app_handle: AppHandle, workspace: &str, cut_video_name: &str, t
         let _ = fs::remove_dir_all(thumbnail_path);
 
         // 生成缩略图
-        println!("generate split Thumbnail dir");
-        let part_one_thumbnail = String::from(track_video_path.clone().join(&video_fist_name).to_str().unwrap());
-        let part_two_thumbnail = String::from(track_video_path.clone().join(&video_second_name).to_str().unwrap());
-        generate_thumbnail(&app_handle, video_first_path.to_str().unwrap(), part_one_thumbnail);
-        generate_thumbnail(&app_handle, video_second_path.to_str().unwrap(), part_two_thumbnail);
+        let first_value = video_fist_name.clone();
+        let second_value = video_second_name.clone();
+        std::thread::spawn(move || {
+            println!("generate split Thumbnail dir");
+            let part_one_thumbnail = String::from(track_video_path.clone().join(&first_value).to_str().unwrap());
+            let part_two_thumbnail = String::from(track_video_path.clone().join(&second_value).to_str().unwrap());
+            generate_thumbnail(&app_handle, video_first_path.to_str().unwrap(), part_one_thumbnail);
+            generate_thumbnail(&app_handle, video_second_path.to_str().unwrap(), part_two_thumbnail);
+        });
     } else {
         panic!("split video failed");
     }

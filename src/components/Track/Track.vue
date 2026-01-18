@@ -45,6 +45,8 @@ onUnmounted(() => {
           <template #default>导出</template>
         </a-button>
       </div>
+      <div class="right-controls">
+      </div>
     </div>
     <div class="tracks">
       <div class="left">
@@ -84,7 +86,10 @@ onUnmounted(() => {
                  @contextmenu="selectFrameContextmenu"
             ></div>
             <template v-for="thumbnail in cutTaskStore.getVideoThumbnail">
-              <div :class="{'thumbnail-border': true, 'last-thumbnail-border': thumbnail.last}" :style="{width: `${thumbnail?.width}px`}">
+              <div v-if="thumbnail.placeholder" class="thumbnail-placeholder" :style="{width: `${thumbnail.width}px`}">
+                <a-skeleton-line :rows="3" />
+              </div>
+              <div v-else :class="{'thumbnail-border': true, 'last-thumbnail-border': thumbnail.last}" :style="{width: `${thumbnail?.width}px`}">
                 <div :class="{'thumbnail-img': true, 'first-thumbnail': thumbnail.first, 'last-thumbnail': thumbnail.last}">
                   <img :src="thumbnail?.url" alt="NO IMG">
                 </div>
