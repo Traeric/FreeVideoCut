@@ -107,7 +107,7 @@ export const useCutTaskStore = defineStore('cutTask', {
                         this.displayUrl = convertFileSrc(url) as string;
                     }
                 });
-            }, 20);
+            }, 200);
         },
         refreshVideoFrame() {
             // 获取当前视频时长
