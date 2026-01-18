@@ -11,6 +11,7 @@ export const useCutTaskStore = defineStore('cutTask', {
     state: () => {
         return {
             videoEl: null as HTMLVideoElement | null,
+            videoLoading: false,
             videoTracks: [] as VideoTrackInfo[],
             currentCutTask: null as CutTask | null,
             displayUrl: "",
@@ -93,6 +94,7 @@ export const useCutTaskStore = defineStore('cutTask', {
             }
         },
         refreshDisplayUrl() {
+            this.videoLoading = true;
             this.displayUrlPullTimer = setInterval(() => {
                 const finalVideoName = localStorage.getItem("finalVideoName");
                 invoke("get_final_video_path", {
@@ -105,6 +107,7 @@ export const useCutTaskStore = defineStore('cutTask', {
                         this.displayUrlPullTimer = null;
 
                         this.displayUrl = convertFileSrc(url) as string;
+                        this.videoLoading = false;
                     }
                 });
             }, 200);

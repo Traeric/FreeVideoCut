@@ -95,6 +95,9 @@ onMounted(() => {
 
 <template>
   <div class="display">
+    <div class="loading" v-if="cutTaskStore.videoLoading">
+      <a-spin class="spin" tip="视频合成中" dot></a-spin>
+    </div>
     <div class="video-player">
       <video
           :src="cutTaskStore.displayUrl"
@@ -102,44 +105,44 @@ onMounted(() => {
       ></video>
     </div>
     <div class="play-area">
-      <div class="control">
-        <icon-play-arrow v-if="!played" class="icon" @click="playVideo" />
-        <icon-pause v-else class="icon pause" @click="pauseVideo" />
+    <div class="control">
+      <icon-play-arrow v-if="!played" class="icon" @click="playVideo" />
+      <icon-pause v-else class="icon pause" @click="pauseVideo" />
 
-        <a-popover>
-          <icon-sound v-if="!mute" class="icon" @click="muteVideo(!mute)" />
-          <template #content>
-            <div class="volum-setting">
-              <a-slider v-model="videoVolume" class="setting" :default-value="50" status="warning" />
-              <a-progress :steps="10" size="small" :percent="videoVolume / 100" status="warning" />
-            </div>
-          </template>
-        </a-popover>
-        <icon-mute v-if="mute" class="icon" @click="muteVideo(!mute)" />
-      </div>
-      <div class="progress">
-        <div
-            class="progress-line"
-            ref="progressLineEl"
-            @click="gotoPosition"
-        >
-          <div class="passed" :style="{width: `${progressDotLeft}px`}"></div>
-          <div class="progress-bar" :style="{left: `${progressDotLeft}px`}">
-            <img
-              @mousedown="dragVideoDown"
-              src="../../assets/progress-dot.svg"
-              alt="NO IMG"
-            >
+      <a-popover>
+        <icon-sound v-if="!mute" class="icon" @click="muteVideo(!mute)" />
+        <template #content>
+          <div class="volum-setting">
+            <a-slider v-model="videoVolume" class="setting" :default-value="50" status="warning" />
+            <a-progress :steps="10" size="small" :percent="videoVolume / 100" status="warning" />
           </div>
-        </div>
-        <a-progress size="mini" status='warning' :percent="progressRate"/>
-      </div>
-      <div class="time">
-        <span class="played">{{ playedTime }}</span>
-        <icon-oblique-line />
-        <span>{{ totalTime }}</span>
-      </div>
+        </template>
+      </a-popover>
+      <icon-mute v-if="mute" class="icon" @click="muteVideo(!mute)" />
     </div>
+    <div class="progress">
+      <div
+          class="progress-line"
+          ref="progressLineEl"
+          @click="gotoPosition"
+      >
+        <div class="passed" :style="{width: `${progressDotLeft}px`}"></div>
+        <div class="progress-bar" :style="{left: `${progressDotLeft}px`}">
+          <img
+            @mousedown="dragVideoDown"
+            src="../../assets/progress-dot.svg"
+            alt="NO IMG"
+          >
+        </div>
+      </div>
+      <a-progress size="mini" status='warning' :percent="progressRate"/>
+    </div>
+    <div class="time">
+      <span class="played">{{ playedTime }}</span>
+      <icon-oblique-line />
+      <span>{{ totalTime }}</span>
+    </div>
+  </div>
   </div>
 </template>
 
