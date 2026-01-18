@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useCutTaskStore } from "../../store/cutTaskStore.ts";
+import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 import {onMounted, ref, watch} from "vue";
-import {formatTime, timeStep, unitLength} from "../../utils/comonUtils.ts";
+import {formatTime} from "../../utils/comonUtils.ts";
 
 const cutTaskStore = useCutTaskStore();
 const displayVideoEl = ref<HTMLVideoElement>();
@@ -96,7 +96,10 @@ onMounted(() => {
 <template>
   <div class="display">
     <div class="video-player">
-      <video :src="cutTaskStore.displayUrl" ref="displayVideoEl"></video>
+      <video
+          :src="cutTaskStore.displayUrl"
+          ref="displayVideoEl"
+      ></video>
     </div>
     <div class="play-area">
       <div class="control">

@@ -11,12 +11,14 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
 
     // 计算需要多少个单元 5s一个单元
     const timeUtilCount = computed(() => {
+        const minWidth = window.window.innerWidth - 90;
+
         // 计算一共需要多少秒
         let totalTime = 0;
         cutTaskStore.videoTracks.forEach(track => {
             totalTime += Number(track.videoTime);
         });
-        return Math.ceil(totalTime / timeStep);
+        return Math.ceil(Math.max(totalTime / timeStep, minWidth / unitLength));
     });
 
     // 计算轨道总长度
@@ -148,7 +150,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
     const removeSelectFrame = (e: MouseEvent) => {
         const exceptClassName = ['import-block', 'video-frame-point', 'time-track', 'track-controls'];
         let parentNode = e.target as any;
-        while (parentNode.tagName !== 'BODY') {
+        while (parentNode && parentNode.tagName !== 'BODY') {
             if (exceptClassName.some(name => parentNode.classList.contains(name))) {
                 return;
             }

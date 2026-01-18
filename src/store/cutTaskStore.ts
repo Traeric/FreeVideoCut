@@ -14,6 +14,7 @@ export const useCutTaskStore = defineStore('cutTask', {
             videoTracks: [] as VideoTrackInfo[],
             currentCutTask: null as CutTask | null,
             displayUrl: "",
+            displayUrlPullTimer: null as number | null,
             videoFrameInfo: {} as VideoFrameInfo,
             selectFrameData: {
                 show: false,
@@ -72,16 +73,10 @@ export const useCutTaskStore = defineStore('cutTask', {
             // 转换图片url
             for (const videoTrack of this.videoTracks) {
                 let count = 0;
-                let currentThumbnailCount = 0;
                 videoTrack.thumbnailGetTimer = setInterval(async () => {
                     const thumbNameList = await invoke('get_thumbnail', { workspace: this.currentCutTask!.folderName, thumbnail: videoTrack.thumbnail }) as string[];
-                    if (thumbNameList.length === currentThumbnailCount) {
+                    if (thumbNameList.length === videoTrack.thumbnailList?.length) {
                         if (count > 5) {
-                            videoTrack.thumbnailList = thumbNameList.map(item => ({
-                                url: convertFileSrc(item),
-                                width: videoTrack.width! / thumbNameList.length,
-                            }));
-
                             clearInterval(videoTrack.thumbnailGetTimer);
                             return;
                         }
@@ -89,16 +84,30 @@ export const useCutTaskStore = defineStore('cutTask', {
                         return;
                     }
 
-                    currentThumbnailCount = thumbNameList.length;
+                    videoTrack.thumbnailList = thumbNameList.map(item => ({
+                        url: convertFileSrc(item),
+                        width: videoTrack.width! / thumbNameList.length,
+                    }));
                     count = 0;
                 }, 50);
             }
         },
-        async refreshDisplayUrl() {
-            const finalVideoName = localStorage.getItem("finalVideoName");
-            const rootPath = await invoke("get_root_path");
-            const displayUrl = `${rootPath}${this.currentCutTask!.folderName}\\final_video\\${finalVideoName}`;
-            this.displayUrl = convertFileSrc(displayUrl) as string;
+        refreshDisplayUrl() {
+            this.displayUrlPullTimer = setInterval(() => {
+                const finalVideoName = localStorage.getItem("finalVideoName");
+                invoke("get_final_video_path", {
+                    workspace: this.currentCutTask!.folderName,
+                    videoName: finalVideoName,
+                }).then((res) => {
+                    const url = res as string;
+                    if (this.displayUrlPullTimer && url) {
+                        clearInterval(this.displayUrlPullTimer);
+                        this.displayUrlPullTimer = null;
+
+                        this.displayUrl = convertFileSrc(url) as string;
+                    }
+                });
+            }, 20);
         },
         refreshVideoFrame() {
             // 获取当前视频时长

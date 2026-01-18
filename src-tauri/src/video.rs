@@ -161,11 +161,20 @@ fn synthesis_video(app_handle: AppHandle, workspace: &str, video_track_list: Vec
         fs::remove_file(&entry?.path())?;
     }
 
-    ffmpeg_video::merge_video(
-        &app_handle,
-        video_track_dirs,
-        final_video_path.join(&final_video_name).to_str().unwrap()
-    );
+    let temp_final_video_name = final_video_name.clone();
+    std::thread::spawn(move || {
+        ffmpeg_video::merge_video(
+            &app_handle,
+            video_track_dirs,
+            final_video_path.join(&temp_final_video_name).to_str().unwrap()
+        );
+
+        // 合并完成写入一个标记文件
+        match fs::write(final_video_path.join("ok.txt"), "file generate success") {
+            Ok(_) => (),
+            Err(error) => println!("flag file write Error: {}", error),
+        }
+    });
     Ok(final_video_name)
 }
 
@@ -233,4 +242,19 @@ fn remove_video_track(workspace: &str, video_track_name: &str, thumbnail: &str) 
     fs::remove_dir_all(video_track_path.join(thumbnail))?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_final_video_path(workspace: &str, video_name: &str) -> String {
+    let final_video_dir = std::path::Path::new(context::DEFAULT_URL)
+      .join(workspace)
+      .join("final_video");
+
+    println!("judge final video path: {:?}", final_video_dir);
+    let flag_file = final_video_dir.join("ok.txt");
+    if flag_file.exists() {
+        final_video_dir.join(video_name).to_str().unwrap().to_string()
+    } else {
+        String::from("")
+    }
 }

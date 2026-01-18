@@ -51,6 +51,7 @@ pub fn run() {
           video::synthesis_final_video,
           video::cut_video,
           video::delete_video_track,
+          video::get_final_video_path,
       ])
       .run(tauri::generate_context!())
         .expect("error while running tauri application");
