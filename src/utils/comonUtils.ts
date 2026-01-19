@@ -23,3 +23,8 @@ export const timeStep = 5;
  * 单位: px
  */
 export const unitLength = 90;
+
+/**
+ * 剪切视频最短单位
+ */
+export const CUT_VIDEO_MIN_LENG = 1;

@@ -73,6 +73,7 @@ onMounted(() => {
   displayVideoEl.value?.addEventListener('loadedmetadata', () => {
     // 获取播放时间
     totalTime.value = formatTime(displayVideoEl.value?.duration ?? 0);
+    played.value = false;
   });
 
   displayVideoEl.value?.addEventListener('timeupdate', () => {

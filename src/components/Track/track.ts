@@ -1,10 +1,11 @@
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 import {computed, Ref, h} from "vue";
-import {formatTime, timeStep, unitLength} from "../../utils/comonUtils.ts";
+import {CUT_VIDEO_MIN_LENG, formatTime, timeStep, unitLength} from "../../utils/comonUtils.ts";
 import {Message} from "@arco-design/web-vue";
 import {invoke} from "@tauri-apps/api/core";
 import {VideoTrackInfo} from "../../types/cutTask.ts";
 import ContextMenu from '@imengyu/vue3-context-menu';
+import { Notification } from '@arco-design/web-vue';
 
 export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLineRef: Ref<HTMLDivElement | undefined>) => {
     const cutTaskStore = useCutTaskStore();
@@ -85,6 +86,14 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
 
         if (!cutVideoTrack) {
             Message.error('获取不到视频轨道');
+            return;
+        }
+
+        if (seconds < CUT_VIDEO_MIN_LENG || cutVideoTrack.videoTime - seconds < CUT_VIDEO_MIN_LENG) {
+            Notification.error({
+                title: '无法分割',
+                content: `无法分割长度小于${CUT_VIDEO_MIN_LENG}秒的视频`,
+            });
             return;
         }
 

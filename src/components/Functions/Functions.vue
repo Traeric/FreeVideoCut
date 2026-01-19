@@ -55,7 +55,7 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
   // 生成当前的display
   let selectIndex = cutTaskStore.videoTracks.findIndex(item => item.select);
   if (selectIndex === -1) {
-    selectIndex = 0;
+    selectIndex = cutTaskStore.videoTracks.length;
   }
 
   invoke('add_video_in_track', {
