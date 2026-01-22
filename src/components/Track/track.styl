@@ -83,18 +83,28 @@
             .thumbnail-border
               height 100%
               overflow hidden
+              display flex
+              flex-direction column
+              background-color rgba(255, 125, 0, .2)
               &.last-thumbnail-border
                 padding-right 3px
               .thumbnail-img
+                flex 1
+                overflow hidden
                 padding 2px 0
-                background-color rgba(255, 125, 0, .2)
                 &.first-thumbnail
                   padding-left 3px
                 &.last-thumbnail
                   padding-right 3px
                 img
-                  height calc(100px - 2px - 4px)
+                  height 100%
                   width calc(100%)
+              .audio
+                flex 0 0 20px
+                width 100%
+                background-size contain
+                background-image url('/audio.svg')
+                background-repeat repeat
             .thumbnail-placeholder
               height 100%
               background-color rgba(255, 125, 0, .2)
@@ -106,6 +116,14 @@
               border 2px solid #ff7d00
         .audio-track
           height 60px
+          position relative
+          .track-item
+            position absolute
+            height 100%
+            background-image url("/audio.svg")
+            background-size contain
+            background-repeat repeat
+            background-color rgba(255, 125, 0, .2)
         .video-frame-point
           position absolute
           top 0

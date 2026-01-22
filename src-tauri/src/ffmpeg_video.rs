@@ -1,8 +1,7 @@
-use std::process::Command;
-use tauri::{AppHandle, Manager};
-use std::path::Path;
 use std::fs::File;
 use std::io::Write;
+use std::process::Command;
+use tauri::{AppHandle, Manager};
 
 fn get_ffmpeg_path(app_handle: &AppHandle) -> String {
   let resource_path = app_handle.path().resource_dir().unwrap();
@@ -124,4 +123,50 @@ pub fn split_video_two(app_handle: &AppHandle, source_path: &str, cut_time: &str
     let error_msg = String::from_utf8_lossy(&output.stderr);
     Err(format!("ffmpeg 执行失败: {}", error_msg).into())
   }
+}
+
+// 获取视频是否有音频流
+pub fn has_audio(app_handle: &AppHandle, video_path: &str) -> bool {
+  let ffmpeg_path = get_ffmpeg_path(app_handle);
+
+  // 使用 -vn 测试音频流
+  Command::new(ffmpeg_path)
+    .args(&["-i", &video_path, "-vn", "-f", "null", "-"])
+    .output()
+    .map(|o| o.status.success())
+    .unwrap_or(false)
+}
+
+// 提取音频
+pub fn split_video_audio(app_handle: &AppHandle, video_path: &str, audio_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+  let ffmpeg_path = get_ffmpeg_path(app_handle);
+
+  // ffmpeg -i input.mp4 -q:a 0 -map a output.mp3
+  println!("copy video audio, video_path: {}, audio_path: {}", video_path, audio_path);
+  Command::new(ffmpeg_path)
+    .args(&[
+      "-i", &video_path,
+      "-q:a", "0",
+      "-map", "a",
+      &audio_path
+    ])
+    .output()?;
+  Ok(())
+}
+
+// 获取静音视频
+pub fn generate_mute_video(app_handle: &AppHandle, video_path: &str, mute_video_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+  let ffmpeg_path = get_ffmpeg_path(app_handle);
+
+  // ffmpeg -i input.mp4 -an -c:v copy temp.mp4
+  println!("get mute video, video_path: {}, audio_path: {}", video_path, mute_video_path);
+  Command::new(ffmpeg_path)
+    .args(&[
+      "-i", &video_path,
+      "-an",
+      "-c:v", "copy",
+      &mute_video_path
+    ])
+    .output()?;
+  Ok(())
 }

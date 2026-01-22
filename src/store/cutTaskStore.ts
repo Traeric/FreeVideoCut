@@ -1,18 +1,32 @@
 import {defineStore} from 'pinia';
-import {DELETE_VIDEO_TRACK, executeDb, INSERT_VIDEO_TRACK, SELECT_VIDEO_TRACK} from "../utils/db.ts";
+import {
+    DELETE_AUDIO_TRACK,
+    DELETE_VIDEO_TRACK,
+    executeDb,
+    INSERT_AUDIO_TRACK,
+    INSERT_CUT_TASK,
+    INSERT_VIDEO_TRACK,
+    QUERY_CUT_TASK,
+    SELECT_AUDIO_TRACK,
+    SELECT_IMPORT_VIDEO,
+    SELECT_VIDEO_TRACK
+} from "../utils/db.ts";
 import Database from "@tauri-apps/plugin-sql";
-import {CutTask, VideoFrameInfo, VideoTrackInfo} from '../types/cutTask.ts';
+import {AudioTrackInfo, CutTask, ImportVideo, VideoFrameInfo, VideoTrackInfo} from '../types/cutTask.ts';
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
-import {timeStep, unitLength} from "../utils/comonUtils.ts";
+import {getUUid, timeStep, unitLength} from "../utils/comonUtils.ts";
 import {Message} from "@arco-design/web-vue";
 
 
 export const useCutTaskStore = defineStore('cutTask', {
     state: () => {
         return {
+            cutTaskList: [] as CutTask[],
+            importVideoList: [] as ImportVideo[],
             videoEl: null as HTMLVideoElement | null,
             videoLoading: false,
             videoTracks: [] as VideoTrackInfo[],
+            audioTracks: [] as AudioTrackInfo[],
             currentCutTask: null as CutTask | null,
             displayUrl: "",
             displayUrlPullTimer: null as number | null,
@@ -45,12 +59,49 @@ export const useCutTaskStore = defineStore('cutTask', {
                 }
                 thumbnailList[0].first = true;
                 thumbnailList[thumbnailList.length - 1].last = true;
+                thumbnailList.forEach(item => item.hasAudio = track.hasAudio);
                 allThumbnails = [...allThumbnails, ...thumbnailList];
             }
             return allThumbnails;
         },
     },
     actions: {
+        async cutTaskInit() {
+            // 获取所有的剪辑任务
+            await executeDb(async db => {
+                let cutList = await db.select(QUERY_CUT_TASK) as any;
+                if (!cutList || !cutList.length) {
+                    // 创建一个剪辑任务
+                    const folderName = getUUid();
+                    await db.execute(INSERT_CUT_TASK, [folderName]);
+                    // 创建相应文件夹
+                    await invoke('create_cut_task_workspace', { folderName });
+                    cutList = await db.select(QUERY_CUT_TASK) as any;
+                }
+
+                this.cutTaskList = cutList;
+                // 选择第一个当作当前的剪辑任务
+                this.currentCutTask = this.cutTaskList[0];
+                // 查询导入视频
+                await this.refreshImportVideos();
+                // 查询视频轨道
+                await this.refreshVideoTrack();
+                // 获取播放视频链接
+                this.refreshDisplayUrl();
+                // 获取音频轨道
+                await this.refreshAudioTracks();
+            });
+        },
+        async refreshImportVideos() {
+            const rootPath = await invoke("get_root_path");
+            await executeDb(async (db: Database) => {
+                this.importVideoList = await db.select(SELECT_IMPORT_VIDEO, [this.currentCutTask!.id]);
+                // 处理视频信息
+                this.importVideoList.forEach((videoInfo: any) => {
+                    videoInfo.url = convertFileSrc(`${rootPath}\\${this.currentCutTask!.folderName}\\import\\${videoInfo.importName}`);
+                });
+            });
+        },
         async refreshVideoTrack() {
             // 获取视频轨道的数据
             await executeDb(async (db: Database) => {
@@ -137,6 +188,7 @@ export const useCutTaskStore = defineStore('cutTask', {
                         track.thumbnail,
                         track.videoTime,
                         display++,
+                        track.hasAudio,
                     ]);
                 }
 
@@ -156,6 +208,38 @@ export const useCutTaskStore = defineStore('cutTask', {
                     localStorage.setItem("finalVideoName", finalVideoName as string);
 
                     this.refreshDisplayUrl();
+                });
+            });
+        },
+        async updateAudioTracks(newAudioTracks: AudioTrackInfo[]) {
+            await executeDb(async (db: Database) => {
+                // 先清除所有音频
+                await db.execute(DELETE_AUDIO_TRACK, [this.currentCutTask!.id]);
+
+                // 插入新的视频轨道
+                let display = 0;
+                for (const audioTrack of newAudioTracks) {
+                    await db.execute(INSERT_AUDIO_TRACK, [
+                        this.currentCutTask!.id,
+                        audioTrack.audioName,
+                        audioTrack.audioTime,
+                        audioTrack.startTime,
+                        display++,
+                    ]);
+                }
+
+                await this.refreshAudioTracks();
+            });
+        },
+        async refreshAudioTracks() {
+            await executeDb(async (db: Database) => {
+                // 获取视频轨道
+                this.audioTracks = await db.select(SELECT_AUDIO_TRACK, [this.currentCutTask!.id]) as AudioTrackInfo[];
+                this.audioTracks.sort((o1, o2) => o1.display - o2.display);
+                // 计算轨道位置
+                this.audioTracks.forEach(audio => {
+                    audio.left = (audio.startTime / timeStep) * unitLength;
+                    audio.width = (audio.audioTime / timeStep) * unitLength;
                 });
             });
         },
@@ -181,6 +265,8 @@ export const useCutTaskStore = defineStore('cutTask', {
             this.selectFrameData.show = false;
             this.selectFrameData.left = 0;
             this.selectFrameData.width = 0;
+            this.selectFrameData.track = null;
+            this.selectFrameData.trackIndex = -1;
         }
     },
 });

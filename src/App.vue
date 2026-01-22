@@ -2,9 +2,13 @@
 import Functions from "./components/Functions/Functions.vue";
 import Display from "./components/Display/Display.vue";
 import Track from "./components/Track/Track.vue";
+import { useCutTaskStore } from './store/cutTaskStore.ts';
+import {onMounted} from "vue";
 
-
-
+const cutTaskStore = useCutTaskStore();
+onMounted(() => {
+  cutTaskStore.cutTaskInit();
+});
 </script>
 
 <template>

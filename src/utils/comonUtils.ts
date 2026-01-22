@@ -28,3 +28,8 @@ export const unitLength = 90;
  * 剪切视频最短单位
  */
 export const CUT_VIDEO_MIN_LENG = 1;
+
+/**
+ * 不需要去除轨道选择框的class
+ */
+export const EXCEPT_CLASS_NAME = ['import-block', 'video-frame-point', 'time-track', 'track-controls', 'mx-context-menu', 'audio-track'];

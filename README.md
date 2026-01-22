@@ -17,3 +17,4 @@ You can learn more about Take Over mode [here](https://github.com/johnsoncodehk/
 
 ## 第三方软件下载
 ### 1.ffmpeg
+https://ffmpeg.org/download.html

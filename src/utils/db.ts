@@ -13,7 +13,7 @@ export const SELECT_IMPORT_VIDEO = `
     WHERE cut_task_id = $1
 `;
 
-export const INSERT_VIDEO_TRACK = 'INSERT INTO video_track (cut_task_id, video_name, thumbnail, video_time, display, has_audio) VALUES ($1, $2, $3, $4, $5, 1)';
+export const INSERT_VIDEO_TRACK = 'INSERT INTO video_track (cut_task_id, video_name, thumbnail, video_time, display, has_audio) VALUES ($1, $2, $3, $4, $5, $6)';
 
 export const SELECT_VIDEO_TRACK = `
     SELECT
@@ -24,6 +24,20 @@ export const SELECT_VIDEO_TRACK = `
 `;
 
 export const DELETE_VIDEO_TRACK = 'DELETE FROM video_track WHERE cut_task_id = $1';
+
+export const UPDATE_VIDEO_HAS_AUDIO = 'UPDATE video_track SET has_audio = 0 WHERE id = $1';
+
+export const INSERT_AUDIO_TRACK = 'INSERT INTO audio_track (cut_task_id, audio_name, audio_time, start_time, display) VALUES ($1, $2, $3, $4, $5)';
+
+export const DELETE_AUDIO_TRACK = 'DELETE FROM audio_track WHERE cut_task_id = $1';
+
+export const SELECT_AUDIO_TRACK = `
+    SELECT
+        id, cut_task_id as cutTaskId, audio_name as audioName, display, audio_time as audioTime, start_time as startTime
+    FROM audio_track
+    WHERE
+        cut_task_id = $1
+`;
 
 export async function executeDb(executeCallback: (db: Database) => any) {
     const dbUrl = await invoke('get_db_url') as string;

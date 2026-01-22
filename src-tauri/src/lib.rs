@@ -4,6 +4,7 @@ mod ffmpeg_video;
 mod context;
 mod utils;
 mod video;
+mod track;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -35,6 +36,15 @@ pub fn run() {
                 has_audio INTEGER NOT NULL,
                 display INTEGER NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS audio_track (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cut_task_id INTEGER NOT NULL,
+                audio_name TEXT NOT NULL,
+                audio_time TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                display INTEGER NOT NULL
+            );
         "#,
         kind: MigrationKind::Up,
       }]).build())
@@ -52,6 +62,7 @@ pub fn run() {
           video::cut_video,
           video::delete_video_track,
           video::get_final_video_path,
+          track::split_video_audio,
       ])
       .run(tauri::generate_context!())
         .expect("error while running tauri application");

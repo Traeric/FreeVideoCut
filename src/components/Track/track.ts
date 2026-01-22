@@ -1,11 +1,12 @@
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 import {computed, Ref, h} from "vue";
-import {CUT_VIDEO_MIN_LENG, formatTime, timeStep, unitLength} from "../../utils/comonUtils.ts";
+import {CUT_VIDEO_MIN_LENG, EXCEPT_CLASS_NAME, formatTime, timeStep, unitLength} from "../../utils/comonUtils.ts";
 import {Message} from "@arco-design/web-vue";
 import {invoke} from "@tauri-apps/api/core";
 import {VideoTrackInfo} from "../../types/cutTask.ts";
 import ContextMenu from '@imengyu/vue3-context-menu';
 import { Notification } from '@arco-design/web-vue';
+import {deleteVideoTrack, splitVideoAudio} from "./trackMenu.ts";
 
 export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLineRef: Ref<HTMLDivElement | undefined>) => {
     const cutTaskStore = useCutTaskStore();
@@ -110,14 +111,16 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
             videoName: `${newVideoTrackNames[0]}.mp4`,
             thumbnail: String(newVideoTrackNames[0]),
             videoTime: seconds,
-            display: 0
+            display: 0,
+            hasAudio: cutVideoTrack.hasAudio,
         };
         const partTwoVideo: VideoTrackInfo = {
             cutTaskId: cutTaskStore.currentCutTask!.id,
             videoName: `${newVideoTrackNames[1]}.mp4`,
             thumbnail: String(newVideoTrackNames[1]),
             videoTime: cutVideoTrack.videoTime - seconds,
-            display: 0
+            display: 0,
+            hasAudio: cutVideoTrack.hasAudio,
         };
         const newVideoTracks = [];
         for (const track of cutTaskStore.videoTracks) {
@@ -157,10 +160,9 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
     };
 
     const removeSelectFrame = (e: MouseEvent) => {
-        const exceptClassName = ['import-block', 'video-frame-point', 'time-track', 'track-controls'];
         let parentNode = e.target as any;
         while (parentNode && parentNode.tagName !== 'BODY') {
-            if (exceptClassName.some(name => parentNode.classList.contains(name))) {
+            if (EXCEPT_CLASS_NAME.some(name => parentNode.classList.contains(name))) {
                 return;
             }
             parentNode = parentNode.parentNode;
@@ -185,17 +187,24 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
                             height: '20px',
                         },
                     }),
-                    onClick: async () => {
-                        await invoke('delete_video_track', {
-                            workspace: cutTaskStore.currentCutTask!.folderName,
-                            videoTrackName: cutTaskStore.selectFrameData.track.videoName,
-                            thumbnail: cutTaskStore.selectFrameData.track.thumbnail,
-                        });
-                        // 刷新数据
-                        cutTaskStore.videoTracks.splice(cutTaskStore.selectFrameData.trackIndex, 1);
-                        await cutTaskStore.updateVideoTracks(cutTaskStore.videoTracks);
-                    }
+                    onClick: () => {
+                        deleteVideoTrack(cutTaskStore);
+                    },
                 },
+                {
+                    label: "音频分离",
+                    icon: h('img', {
+                        src: '/split.svg',
+                        style: {
+                            width: '20px',
+                            height: '20px',
+                        }
+                    }),
+                    disabled: !cutTaskStore.selectFrameData.track.hasAudio,
+                    onClick: () => {
+                        splitVideoAudio(cutTaskStore);
+                    },
+                }
             ]
         });
     };

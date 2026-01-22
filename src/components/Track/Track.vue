@@ -93,11 +93,14 @@ onUnmounted(() => {
                 <div :class="{'thumbnail-img': true, 'first-thumbnail': thumbnail.first, 'last-thumbnail': thumbnail.last}">
                   <img :src="thumbnail?.url" alt="NO IMG">
                 </div>
+                <div class="audio" v-if="thumbnail.hasAudio === 1"></div>
               </div>
             </template>
           </div>
         </div>
-        <div class="cut-track audio-track" :style="{width: `${trackTotalWith}px`}"></div>
+        <div class="cut-track audio-track" :style="{width: `${trackTotalWith}px`}">
+          <div class="track-item" v-for="audio of cutTaskStore.audioTracks" :style="{left: `${audio.left}px`, width: `${audio.width}px`}"></div>
+        </div>
       </div>
     </div>
   </div>

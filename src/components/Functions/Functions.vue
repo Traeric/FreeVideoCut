@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import {open} from "@tauri-apps/plugin-dialog";
-import {convertFileSrc, invoke} from "@tauri-apps/api/core";
-import {getUUid} from '../../utils/comonUtils.ts';
-import {executeDb, INSERT_CUT_TASK, INSERT_IMPORT_VIDEO, QUERY_CUT_TASK, SELECT_IMPORT_VIDEO} from '../../utils/db.ts';
-import {onMounted, ref} from "vue";
-import {CutTask, ImportVideo, VideoTrackInfo} from "../../types/cutTask.ts";
+import {invoke} from "@tauri-apps/api/core";
+import {executeDb, INSERT_IMPORT_VIDEO} from '../../utils/db.ts';
+import {ImportVideo, VideoTrackInfo} from "../../types/cutTask.ts";
 import Database from "@tauri-apps/plugin-sql";
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 
-
-const cutTaskList = ref<CutTask[]>([]);
-const importVideoList = ref<ImportVideo[]>([]);
 const cutTaskStore = useCutTaskStore();
 
 const openUploadVideo = async () => {
@@ -36,19 +31,8 @@ const openUploadVideo = async () => {
     ]);
 
     // 查询视频列表
-    await refreshImportVideos();
+    await cutTaskStore.refreshImportVideos();
   })
-};
-
-const refreshImportVideos = async () => {
-  const rootPath = await invoke("get_root_path");
-  await executeDb(async (db: Database) => {
-    importVideoList.value = await db.select(SELECT_IMPORT_VIDEO, [cutTaskStore.currentCutTask!.id]);
-    // 处理视频信息
-    importVideoList.value.forEach((videoInfo: any) => {
-      videoInfo.url = convertFileSrc(`${rootPath}\\${cutTaskStore.currentCutTask!.folderName}\\import\\${videoInfo.importName}`);
-    });
-  });
 };
 
 const addVideoInTrack = async (videoInfo: ImportVideo) => {
@@ -62,15 +46,15 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
     workspace: cutTaskStore.currentCutTask!.folderName,
     importName: videoInfo.importName,
   }).then(async (res) => {
-    const videoInfos = res as string;
+    const videoInfoArr = res as any[];
 
-    const videoInfoArr = videoInfos.split("|");
     const addVideo: VideoTrackInfo = {
       cutTaskId: cutTaskStore.currentCutTask!.id,
       videoName: `${videoInfoArr[0]}.mp4`,
       thumbnail: String(videoInfoArr[0]),
       videoTime: Number(videoInfoArr[1]),
-      display: 0
+      display: 0,
+      hasAudio: Number(videoInfoArr[2]),
     };
     const newVideoTracks = cutTaskStore.videoTracks.slice(0);
     newVideoTracks.splice(selectIndex, 0, addVideo);
@@ -78,31 +62,6 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
     await cutTaskStore.updateVideoTracks(newVideoTracks, selectIndex);
   });
 };
-
-onMounted(async () => {
-  // 获取所有的剪辑任务
-  await executeDb(async db => {
-    let cutList = await db.select(QUERY_CUT_TASK) as any;
-    if (!cutList || !cutList.length) {
-      // 创建一个剪辑任务
-      const folderName = getUUid();
-      await db.execute(INSERT_CUT_TASK, [folderName]);
-      // 创建相应文件夹
-      await invoke('create_cut_task_workspace', { folderName });
-      cutList = await db.select(QUERY_CUT_TASK) as any;
-    }
-
-    cutTaskList.value = cutList;
-    // 选择第一个当作当前的剪辑任务
-    cutTaskStore.currentCutTask = cutTaskList.value[0];
-    // 查询导入视频
-    await refreshImportVideos();
-    // 查询视频轨道
-    await cutTaskStore.refreshVideoTrack();
-    // 获取播放视频链接
-    cutTaskStore.refreshDisplayUrl();
-  });
-});
 </script>
 
 <template>
@@ -126,12 +85,12 @@ onMounted(async () => {
       <a-dropdown-button type="primary" shape="round">
         历史剪辑
         <template #content>
-          <a-doption v-for="value in cutTaskList">{{ value.createTime }}</a-doption>
+          <a-doption v-for="value in cutTaskStore.cutTaskList">{{ value.createTime }}</a-doption>
         </template>
       </a-dropdown-button>
     </div>
     <div class="import-video-list">
-      <div v-for="videoInfo in importVideoList" class="import-block">
+      <div v-for="videoInfo in cutTaskStore.importVideoList" class="import-block">
         <div class="view">
           <video
             type="video/mp4"

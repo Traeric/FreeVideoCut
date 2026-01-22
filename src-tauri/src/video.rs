@@ -68,7 +68,7 @@ pub fn create_cut_task_workspace(folder_name: &str) {
  * 将视频添加到轨道中
  */
 #[tauri::command]
-pub fn add_video_in_track(app_handle: AppHandle, workspace: &str, import_name: &str) -> String {
+pub fn add_video_in_track(app_handle: AppHandle, workspace: &str, import_name: &str) -> (String, f64, bool) {
     let mut workspace_path = context::DEFAULT_URL.to_string();
     workspace_path.push_str(workspace);
 
@@ -101,13 +101,15 @@ pub fn add_video_in_track(app_handle: AppHandle, workspace: &str, import_name: &
         video_time = time;
     }
 
+    // 判断视频是否包含音频流
+    let has_audio = ffmpeg_video::has_audio(&app_handle, &dest_path);
+
     // 生成视频缩略图
     std::thread::spawn(move || {
         generate_thumbnail(&app_handle, dest_path.as_str(), thumbnail_dir);
     });
 
-    format!("{}|{}", track_video_name_suffix, video_time)
-
+    (track_video_name_suffix, video_time, has_audio)
 }
 
 #[tauri::command]

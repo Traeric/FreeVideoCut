@@ -28,6 +28,17 @@ export interface VideoTrackInfo {
     thumbnailGetTimer?: number,
 }
 
+export interface AudioTrackInfo {
+    id?: number,
+    cutTaskId: number,
+    audioName: string,
+    audioTime: number,
+    startTime: number,
+    display: number,
+    left?: number,
+    width?: number,
+}
+
 export interface VideoFrameInfo {
     left: number,
     timer: number,
