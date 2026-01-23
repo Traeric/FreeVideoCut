@@ -2,10 +2,13 @@
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 import {onMounted, ref, watch} from "vue";
 import {formatTime} from "../../utils/comonUtils.ts";
+import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 
 const cutTaskStore = useCutTaskStore();
+const videoPlayStore = useVideoPlayStore();
 const displayVideoEl = ref<HTMLVideoElement>();
 const progressLineEl = ref<HTMLDivElement>();
+const playCanvasEl = ref<HTMLCanvasElement>();
 const played = ref(false);
 const playedTime = ref(formatTime(0));
 const totalTime = ref(formatTime(0));
@@ -21,14 +24,11 @@ watch(videoVolume, (newVal, _) => {
 });
 
 const playVideo = () => {
-  displayVideoEl.value!.volume = videoVolume.value / 100;
-  displayVideoEl.value!.play();
-  played.value = true;
+  // displayVideoEl.value!.volume = videoVolume.value / 100;
+  videoPlayStore.playCurrentVideo();
 };
 const pauseVideo = () => {
-  displayVideoEl.value!.pause();
-  played.value = false;
-  clearInterval(positionCalcTimer);
+  videoPlayStore.pauseCurrentVideo();
 };
 
 const dragVideoDown = (e: MouseEvent) => {
@@ -69,6 +69,7 @@ const muteVideo = (isMute: boolean) => {
 
 onMounted(() => {
   cutTaskStore.videoEl = displayVideoEl.value!;
+  videoPlayStore.setCanvas(playCanvasEl.value!);
 
   displayVideoEl.value?.addEventListener('loadedmetadata', () => {
     // 获取播放时间
@@ -100,14 +101,11 @@ onMounted(() => {
       <a-spin class="spin" tip="视频合成中" dot></a-spin>
     </div>
     <div class="video-player">
-      <video
-          :src="cutTaskStore.displayUrl"
-          ref="displayVideoEl"
-      ></video>
+      <canvas ref="playCanvasEl"></canvas>
     </div>
     <div class="play-area">
     <div class="control">
-      <icon-play-arrow v-if="!played" class="icon" @click="playVideo" />
+      <icon-play-arrow v-if="!videoPlayStore.isPlaying" class="icon" @click="playVideo" />
       <icon-pause v-else class="icon pause" @click="pauseVideo" />
 
       <a-popover>

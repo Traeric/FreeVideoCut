@@ -26,6 +26,7 @@ export interface VideoTrackInfo {
     left?: number,
     width?: number,
     thumbnailGetTimer?: number,
+    videoEl?: HTMLVideoElement,
 }
 
 export interface AudioTrackInfo {

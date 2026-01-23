@@ -15,7 +15,7 @@ import Database from "@tauri-apps/plugin-sql";
 import {AudioTrackInfo, CutTask, ImportVideo, VideoFrameInfo, VideoTrackInfo} from '../types/cutTask.ts';
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
 import {getUUid, timeStep, unitLength} from "../utils/comonUtils.ts";
-import {Message} from "@arco-design/web-vue";
+import {useVideoPlayStore} from "./videoPlayStore.ts";
 
 
 export const useCutTaskStore = defineStore('cutTask', {
@@ -23,7 +23,8 @@ export const useCutTaskStore = defineStore('cutTask', {
         return {
             cutTaskList: [] as CutTask[],
             importVideoList: [] as ImportVideo[],
-            videoEl: null as HTMLVideoElement | null,
+            videoEl: null as HTMLVideoElement | null, // TODO 待删除
+            playCanvasEl: null as HTMLCanvasElement | null,
             videoLoading: false,
             videoTracks: [] as VideoTrackInfo[],
             audioTracks: [] as AudioTrackInfo[],
@@ -122,6 +123,10 @@ export const useCutTaskStore = defineStore('cutTask', {
                 prevTrack = track;
             });
 
+            // 给每个视频绑定video标签
+            const videoPlayStore = useVideoPlayStore();
+            await videoPlayStore.initVideoTracks(this);
+
             // 转换图片url
             for (const videoTrack of this.videoTracks) {
                 let count = 0;
@@ -197,18 +202,18 @@ export const useCutTaskStore = defineStore('cutTask', {
                 this.setSelectFrameData(selectIndex);
 
                 // 生成最终的视频
-                invoke('synthesis_final_video', {
-                    workspace: this.currentCutTask!.folderName,
-                    videoTrackList: this.videoTracks.map(item => item.videoName),
-                }).then(finalVideoName => {
-                    if ("bad path" === finalVideoName) {
-                        Message.error("合成视频出错");
-                        return;
-                    }
-                    localStorage.setItem("finalVideoName", finalVideoName as string);
-
-                    this.refreshDisplayUrl();
-                });
+                // invoke('synthesis_final_video', {
+                //     workspace: this.currentCutTask!.folderName,
+                //     videoTrackList: this.videoTracks.map(item => item.videoName),
+                // }).then(finalVideoName => {
+                //     if ("bad path" === finalVideoName) {
+                //         Message.error("合成视频出错");
+                //         return;
+                //     }
+                //     localStorage.setItem("finalVideoName", finalVideoName as string);
+                //
+                //     this.refreshDisplayUrl();
+                // });
             });
         },
         async updateAudioTracks(newAudioTracks: AudioTrackInfo[]) {
