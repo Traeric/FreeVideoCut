@@ -13,6 +13,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             currentVideoIndex: 0,
             isPlaying: false,   // 视频是否播放
             animationId: -1,
+            videoTotalTime: 0,  // 视频总时长
         };
     },
     actions: {
@@ -28,19 +29,13 @@ export const useVideoPlayStore = defineStore('videoPlay', {
 
             this.videoTracks = videoTracks;
             const rootPath = await invoke('get_root_path');
-            videoTracks.forEach((track: VideoTrackInfo, index: number) => {
+            videoTracks.forEach((track: VideoTrackInfo) => {
+                this.videoTotalTime += Number(track.videoTime);
+
                 track.videoEl = document.createElement('video');
                 track.videoEl.src = convertFileSrc(`${rootPath}/${currentCutTask!.folderName}/videoTrack/${track.videoName}`);
                 track.videoEl.preload = 'metadata';
                 track.videoEl.muted = true;
-
-                // 视频加载完成时自动设置画布尺寸(第一个)
-                track.videoEl.addEventListener('loadedmetadata', () => {
-                    if(index === 0) {
-                        this.playCanvasEl!.width = track.videoEl!.videoWidth;
-                        this.playCanvasEl!.height = track.videoEl!.videoHeight;
-                    }
-                });
 
                 // 监听视频播放结束，切换到下一个视频
                 track.videoEl.addEventListener('ended', () => {
@@ -68,6 +63,8 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.canvasCtx!.clearRect(0, 0, this.playCanvasEl!.width, this.playCanvasEl!.height);
 
             // 绘制当前视频帧
+            this.playCanvasEl!.width = this.currentVideo.videoEl!.videoWidth;
+            this.playCanvasEl!.height = this.currentVideo.videoEl!.videoHeight;
             this.canvasCtx!.drawImage(
                 this.currentVideo.videoEl!,
                 0, 0, this.playCanvasEl!.width, this.playCanvasEl!.height

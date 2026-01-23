@@ -6,17 +6,14 @@ import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 
 const cutTaskStore = useCutTaskStore();
 const videoPlayStore = useVideoPlayStore();
-const displayVideoEl = ref<HTMLVideoElement>();
 const progressLineEl = ref<HTMLDivElement>();
 const playCanvasEl = ref<HTMLCanvasElement>();
 const played = ref(false);
 const playedTime = ref(formatTime(0));
-const totalTime = ref(formatTime(0));
 const progressRate = ref(0);
 const progressDotLeft = ref(0);
 const mute = ref(false);
 const videoVolume = ref(50);
-let positionCalcTimer = 0;
 
 watch(videoVolume, (newVal, _) => {
   displayVideoEl.value!.volume = newVal / 100;
@@ -51,7 +48,6 @@ const dragVideoDown = (e: MouseEvent) => {
 function setVideoDisplay(left: number, progressLineRect: DOMRect) {
   progressDotLeft.value = left;
   progressRate.value = left / progressLineRect!.width;
-  displayVideoEl.value!.currentTime = displayVideoEl.value!.duration * progressRate.value;
   playedTime.value = formatTime(displayVideoEl.value?.currentTime ?? 0);
 }
 
@@ -64,34 +60,27 @@ const gotoPosition = (e: MouseEvent) => {
 
 const muteVideo = (isMute: boolean) => {
   mute.value = isMute;
-  displayVideoEl.value!.muted = isMute;
+  // displayVideoEl.value!.muted = isMute;
 };
 
 onMounted(() => {
-  cutTaskStore.videoEl = displayVideoEl.value!;
   videoPlayStore.setCanvas(playCanvasEl.value!);
 
-  displayVideoEl.value?.addEventListener('loadedmetadata', () => {
-    // 获取播放时间
-    totalTime.value = formatTime(displayVideoEl.value?.duration ?? 0);
-    played.value = false;
-  });
-
-  displayVideoEl.value?.addEventListener('timeupdate', () => {
-    positionCalcTimer = setInterval(() => {
-      const progressLineRect = progressLineEl.value?.getBoundingClientRect();
-      playedTime.value = formatTime(displayVideoEl.value?.currentTime ?? 0);
-      progressRate.value = (displayVideoEl.value?.currentTime ?? 0) / (displayVideoEl.value?.duration ?? 0);
-      progressDotLeft.value = progressLineRect!.width * progressRate.value;
-
-      if (displayVideoEl.value!.currentTime >= displayVideoEl.value!.duration) {
-        // 播放结束
-        played.value = false;
-      }
-
-      cutTaskStore.refreshVideoFrame();
-    }, 10);
-  });
+  // displayVideoEl.value?.addEventListener('timeupdate', () => {
+  //   positionCalcTimer = setInterval(() => {
+  //     const progressLineRect = progressLineEl.value?.getBoundingClientRect();
+  //     playedTime.value = formatTime(displayVideoEl.value?.currentTime ?? 0);
+  //     progressRate.value = (displayVideoEl.value?.currentTime ?? 0) / (displayVideoEl.value?.duration ?? 0);
+  //     progressDotLeft.value = progressLineRect!.width * progressRate.value;
+  //
+  //     if (displayVideoEl.value!.currentTime >= displayVideoEl.value!.duration) {
+  //       // 播放结束
+  //       played.value = false;
+  //     }
+  //
+  //     cutTaskStore.refreshVideoFrame();
+  //   }, 10);
+  // });
 });
 </script>
 
@@ -139,7 +128,7 @@ onMounted(() => {
     <div class="time">
       <span class="played">{{ playedTime }}</span>
       <icon-oblique-line />
-      <span>{{ totalTime }}</span>
+      <span>{{ formatTime(videoPlayStore.videoTotalTime) }}</span>
     </div>
   </div>
   </div>

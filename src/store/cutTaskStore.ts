@@ -24,7 +24,6 @@ export const useCutTaskStore = defineStore('cutTask', {
             cutTaskList: [] as CutTask[],
             importVideoList: [] as ImportVideo[],
             videoEl: null as HTMLVideoElement | null, // TODO 待删除
-            playCanvasEl: null as HTMLCanvasElement | null,
             videoLoading: false,
             videoTracks: [] as VideoTrackInfo[],
             audioTracks: [] as AudioTrackInfo[],
