@@ -12,9 +12,9 @@ import {
     SELECT_VIDEO_TRACK
 } from "../utils/db.ts";
 import Database from "@tauri-apps/plugin-sql";
-import {AudioTrackInfo, CutTask, ImportVideo, VideoFrameInfo, VideoTrackInfo} from '../types/cutTask.ts';
+import {AudioTrackInfo, CutTask, ImportVideo, VideoTrackInfo} from '../types/cutTask.ts';
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
-import {getUUid, timeStep, unitLength} from "../utils/comonUtils.ts";
+import {getUUid, TIME_STEP, UNIT_LENGTH} from "../utils/comonUtils.ts";
 import {useVideoPlayStore} from "./videoPlayStore.ts";
 
 
@@ -24,13 +24,11 @@ export const useCutTaskStore = defineStore('cutTask', {
             cutTaskList: [] as CutTask[],
             importVideoList: [] as ImportVideo[],
             videoEl: null as HTMLVideoElement | null, // TODO 待删除
-            videoLoading: false,
             videoTracks: [] as VideoTrackInfo[],
             audioTracks: [] as AudioTrackInfo[],
             currentCutTask: null as CutTask | null,
             displayUrl: "",
             displayUrlPullTimer: null as number | null,
-            videoFrameInfo: {} as VideoFrameInfo,
             selectFrameData: {
                 show: false,
                 width: 0,
@@ -53,7 +51,7 @@ export const useCutTaskStore = defineStore('cutTask', {
                 if (!thumbnailList || !thumbnailList.length) {
                     allThumbnails.push({
                         placeholder: true,
-                        width: track.videoTime / timeStep * unitLength,
+                        width: track.videoTime / TIME_STEP * UNIT_LENGTH,
                     });
                     continue;
                 }
@@ -116,7 +114,7 @@ export const useCutTaskStore = defineStore('cutTask', {
             // 计算每个轨道的位置信息
             let prevTrack: VideoTrackInfo | null = null;
             this.videoTracks.forEach(track => {
-                track.width = track.videoTime * (unitLength / timeStep);
+                track.width = track.videoTime * (UNIT_LENGTH / TIME_STEP);
                 // @ts-ignore
                 track.left = (prevTrack !== null && prevTrack !== undefined) ? (prevTrack.left + prevTrack.width) : 0;
                 prevTrack = track;
@@ -149,7 +147,6 @@ export const useCutTaskStore = defineStore('cutTask', {
             }
         },
         refreshDisplayUrl() {
-            this.videoLoading = true;
             this.displayUrlPullTimer = setInterval(() => {
                 const finalVideoName = localStorage.getItem("finalVideoName");
                 invoke("get_final_video_path", {
@@ -162,22 +159,13 @@ export const useCutTaskStore = defineStore('cutTask', {
                         this.displayUrlPullTimer = null;
 
                         this.displayUrl = convertFileSrc(url) as string;
-                        this.videoLoading = false;
                     }
                 });
             }, 200);
         },
-        refreshVideoFrame() {
-            // 获取当前视频时长
-            const currentSecond = this.videoEl!.currentTime;
-            // 计算单元格个数
-            const unitCount = currentSecond / timeStep;
-            // 计算视频帧需要在轨道上走多远
-            this.videoFrameInfo.left = unitCount * unitLength;
-        },
         setVideoTime(left: number) {
             // 计算时间
-            this.videoEl!.currentTime = (left / unitLength) * timeStep;
+            this.videoEl!.currentTime = (left / UNIT_LENGTH) * TIME_STEP;
         },
         async updateVideoTracks(newVideoTracks: VideoTrackInfo[], selectIndex: number = -1) {
             await executeDb(async db => {
@@ -191,6 +179,8 @@ export const useCutTaskStore = defineStore('cutTask', {
                         track.videoName,
                         track.thumbnail,
                         track.videoTime,
+                        track.startTime,
+                        track.endTime,
                         display++,
                         track.hasAudio,
                     ]);
@@ -242,8 +232,8 @@ export const useCutTaskStore = defineStore('cutTask', {
                 this.audioTracks.sort((o1, o2) => o1.display - o2.display);
                 // 计算轨道位置
                 this.audioTracks.forEach(audio => {
-                    audio.left = (audio.startTime / timeStep) * unitLength;
-                    audio.width = (audio.audioTime / timeStep) * unitLength;
+                    audio.left = (audio.startTime / TIME_STEP) * UNIT_LENGTH;
+                    audio.width = (audio.audioTime / TIME_STEP) * UNIT_LENGTH;
                 });
             });
         },

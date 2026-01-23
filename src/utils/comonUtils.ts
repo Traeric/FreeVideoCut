@@ -17,12 +17,12 @@ export function formatTime(seconds: number): string {
     return [h, m, s].map(num => num.toString().padStart(2, '0')).join(':');
 }
 
-export const timeStep = 5;
+export const TIME_STEP = 5;
 
 /**
  * 单位: px
  */
-export const unitLength = 90;
+export const UNIT_LENGTH = 90;
 
 /**
  * 剪切视频最短单位

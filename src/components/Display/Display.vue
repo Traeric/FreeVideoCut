@@ -8,15 +8,11 @@ const cutTaskStore = useCutTaskStore();
 const videoPlayStore = useVideoPlayStore();
 const progressLineEl = ref<HTMLDivElement>();
 const playCanvasEl = ref<HTMLCanvasElement>();
-const played = ref(false);
-const playedTime = ref(formatTime(0));
-const progressRate = ref(0);
-const progressDotLeft = ref(0);
 const mute = ref(false);
 const videoVolume = ref(50);
 
 watch(videoVolume, (newVal, _) => {
-  displayVideoEl.value!.volume = newVal / 100;
+  // displayVideoEl.value!.volume = newVal / 100;
   mute.value = newVal === 0;
 });
 
@@ -31,31 +27,37 @@ const pauseVideo = () => {
 const dragVideoDown = (e: MouseEvent) => {
   e.preventDefault();
   const progressLineRect = progressLineEl.value?.getBoundingClientRect();
+  const videoIsPlayed = videoPlayStore.isPlaying;
+  if (videoIsPlayed) {
+    // 先暂停视频
+    videoPlayStore.pauseCurrentVideo();
+  }
   document.onmousemove = (moveE: MouseEvent) => {
     let currentX = moveE.clientX;
     let left = currentX - progressLineRect!.x;
     // 限制位置
     left = Math.max(0, left);
     left = Math.min(left, progressLineRect!.width);
-    setVideoDisplay(left, progressLineRect!);
+    videoPlayStore.movePointVideo(videoPlayStore.videoTotalTime * left / progressLineRect!.width);
   };
 
   document.onmouseup = () => {
     document.onmousemove = null;
+    // 恢复播放
+    if (videoIsPlayed) {
+      videoPlayStore.playCurrentVideo();
+    }
   };
 };
-
-function setVideoDisplay(left: number, progressLineRect: DOMRect) {
-  progressDotLeft.value = left;
-  progressRate.value = left / progressLineRect!.width;
-  playedTime.value = formatTime(displayVideoEl.value?.currentTime ?? 0);
-}
 
 const gotoPosition = (e: MouseEvent) => {
   const clientX = e.clientX;
   const progressRect = progressLineEl.value!.getBoundingClientRect();
   const left = clientX - progressRect!.x;
-  setVideoDisplay(left, progressRect!);
+  videoPlayStore.movePointVideo(videoPlayStore.videoTotalTime * left / progressRect!.width);
+  if (videoPlayStore.isPlaying) {
+    videoPlayStore.playCurrentVideo();
+  }
 };
 
 const muteVideo = (isMute: boolean) => {
@@ -64,29 +66,13 @@ const muteVideo = (isMute: boolean) => {
 };
 
 onMounted(() => {
-  videoPlayStore.setCanvas(playCanvasEl.value!);
-
-  // displayVideoEl.value?.addEventListener('timeupdate', () => {
-  //   positionCalcTimer = setInterval(() => {
-  //     const progressLineRect = progressLineEl.value?.getBoundingClientRect();
-  //     playedTime.value = formatTime(displayVideoEl.value?.currentTime ?? 0);
-  //     progressRate.value = (displayVideoEl.value?.currentTime ?? 0) / (displayVideoEl.value?.duration ?? 0);
-  //     progressDotLeft.value = progressLineRect!.width * progressRate.value;
-  //
-  //     if (displayVideoEl.value!.currentTime >= displayVideoEl.value!.duration) {
-  //       // 播放结束
-  //       played.value = false;
-  //     }
-  //
-  //     cutTaskStore.refreshVideoFrame();
-  //   }, 10);
-  // });
+  videoPlayStore.init(playCanvasEl.value!, progressLineEl.value!);
 });
 </script>
 
 <template>
   <div class="display">
-    <div class="loading" v-if="cutTaskStore.videoLoading">
+    <div class="loading" v-if="false">
       <a-spin class="spin" tip="视频合成中" dot></a-spin>
     </div>
     <div class="video-player">
@@ -94,19 +80,47 @@ onMounted(() => {
     </div>
     <div class="play-area">
     <div class="control">
-      <icon-play-arrow v-if="!videoPlayStore.isPlaying" class="icon" @click="playVideo" />
-      <icon-pause v-else class="icon pause" @click="pauseVideo" />
+      <div class="play-icon">
+        <img
+            v-if="!videoPlayStore.isPlaying"
+            @click="playVideo"
+            src="../../assets/icons/play.svg"
+            alt="NO IMG"
+            class="icon"
+        >
+        <img
+            v-else
+            @click="pauseVideo"
+            src="../../assets/icons/pause.svg"
+            alt="NO IMG"
+            class="icon pause-icon"
+        >
+      </div>
 
-      <a-popover>
-        <icon-sound v-if="!mute" class="icon" @click="muteVideo(!mute)" />
-        <template #content>
-          <div class="volum-setting">
-            <a-slider v-model="videoVolume" class="setting" :default-value="50" status="warning" />
-            <a-progress :steps="10" size="small" :percent="videoVolume / 100" status="warning" />
-          </div>
-        </template>
-      </a-popover>
-      <icon-mute v-if="mute" class="icon" @click="muteVideo(!mute)" />
+      <div class="audio-icon">
+        <a-popover>
+          <img
+              v-if="!mute"
+              @click="muteVideo(!mute)"
+              src="../../assets/icons/audio.svg"
+              alt="NO IMG"
+              class="icon"
+          >
+          <template #content>
+            <div class="volum-setting">
+              <a-slider v-model="videoVolume" class="setting" :default-value="50" status="warning" />
+              <a-progress :steps="10" size="small" :percent="videoVolume / 100" status="warning" />
+            </div>
+          </template>
+        </a-popover>
+        <img
+            v-if="mute"
+            src="../../assets/icons/mute.svg"
+            alt="NO IMG"
+            class="icon mute-icon"
+            @click="muteVideo(!mute)"
+        >
+      </div>
     </div>
     <div class="progress">
       <div
@@ -114,8 +128,8 @@ onMounted(() => {
           ref="progressLineEl"
           @click="gotoPosition"
       >
-        <div class="passed" :style="{width: `${progressDotLeft}px`}"></div>
-        <div class="progress-bar" :style="{left: `${progressDotLeft}px`}">
+        <div class="passed" :style="{width: `${videoPlayStore.progressDotLeft}px`}"></div>
+        <div class="progress-bar" :style="{left: `${videoPlayStore.progressDotLeft}px`}">
           <img
             @mousedown="dragVideoDown"
             src="../../assets/progress-dot.svg"
@@ -123,10 +137,10 @@ onMounted(() => {
           >
         </div>
       </div>
-      <a-progress size="mini" status='warning' :percent="progressRate"/>
+      <a-progress size="mini" status='warning' :percent="videoPlayStore.progressRate"/>
     </div>
     <div class="time">
-      <span class="played">{{ playedTime }}</span>
+      <span class="played">{{ formatTime(videoPlayStore.videoCurrentTime) }}</span>
       <icon-oblique-line />
       <span>{{ formatTime(videoPlayStore.videoTotalTime) }}</span>
     </div>

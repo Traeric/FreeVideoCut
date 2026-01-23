@@ -21,6 +21,8 @@ export interface VideoTrackInfo {
     thumbnail: string,
     hasAudio?: number,
     videoTime: number, // 单位秒
+    startTime: number,
+    endTime: number,
     thumbnailList?: Array<{ url: string, width: number }>,
     select?: boolean,
     left?: number,

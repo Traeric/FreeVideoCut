@@ -53,6 +53,8 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
       videoName: `${videoInfoArr[0]}.mp4`,
       thumbnail: String(videoInfoArr[0]),
       videoTime: Number(videoInfoArr[1]),
+      startTime: 0,
+      endTime: Number(videoInfoArr[1]),
       display: 0,
       hasAudio: Number(videoInfoArr[2]),
     };

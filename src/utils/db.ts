@@ -13,11 +13,15 @@ export const SELECT_IMPORT_VIDEO = `
     WHERE cut_task_id = $1
 `;
 
-export const INSERT_VIDEO_TRACK = 'INSERT INTO video_track (cut_task_id, video_name, thumbnail, video_time, display, has_audio) VALUES ($1, $2, $3, $4, $5, $6)';
+export const INSERT_VIDEO_TRACK = `
+    INSERT INTO video_track (cut_task_id, video_name, thumbnail, video_time, start_time, end_time, display, has_audio)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`;
 
 export const SELECT_VIDEO_TRACK = `
     SELECT
-        id, cut_task_id as cutTaskId, video_name as videoName, display, thumbnail, has_audio as hasAudio, video_time as videoTime
+        id, cut_task_id as cutTaskId, video_name as videoName, display, thumbnail, has_audio as hasAudio, video_time as videoTime,
+        start_time as startTime, end_time as endTime
     FROM video_track
     WHERE
         cut_task_id = $1

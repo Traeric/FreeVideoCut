@@ -1,12 +1,15 @@
 import {defineStore} from "pinia";
-import {VideoTrackInfo} from "../types/cutTask.ts";
+import {VideoFrameInfo, VideoTrackInfo} from "../types/cutTask.ts";
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
 import {Message} from "@arco-design/web-vue";
+import {TIME_STEP, UNIT_LENGTH} from "../utils/comonUtils.ts";
 
 export const useVideoPlayStore = defineStore('videoPlay', {
     state: () => {
         return {
             playCanvasEl: null as HTMLCanvasElement | null,
+            progressLineEl: null as HTMLDivElement | null,
+            progressLineRect: null as DOMRect | null,
             canvasCtx: null as CanvasRenderingContext2D | null,
             currentVideo: null as VideoTrackInfo | null,
             videoTracks: [] as VideoTrackInfo[],
@@ -14,9 +17,25 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             isPlaying: false,   // 视频是否播放
             animationId: -1,
             videoTotalTime: 0,  // 视频总时长
+            videoCurrentTime: 0, // 当前视频时长
+            progressRate: 0,
+            progressDotLeft: 0,
+            lastStatisticsProgressTime: Date.now(),
+            videoFrameInfo: {} as VideoFrameInfo, // 剪辑轨道时间指针
         };
     },
+    getters: {
+
+    },
     actions: {
+        init(canvasEl: HTMLCanvasElement, progressLineEl: HTMLDivElement) {
+            this.setCanvas(canvasEl);
+            this.progressLineEl = progressLineEl;
+            this.progressLineRect = progressLineEl.getBoundingClientRect();
+            document.addEventListener("resize", () => {
+                this.progressLineRect = progressLineEl.getBoundingClientRect();
+            });
+        },
         setCanvas(canvasEl: HTMLCanvasElement) {
             this.playCanvasEl = canvasEl;
             this.canvasCtx = canvasEl.getContext('2d');
@@ -30,27 +49,50 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.videoTracks = videoTracks;
             const rootPath = await invoke('get_root_path');
             videoTracks.forEach((track: VideoTrackInfo) => {
-                this.videoTotalTime += Number(track.videoTime);
-
                 track.videoEl = document.createElement('video');
                 track.videoEl.src = convertFileSrc(`${rootPath}/${currentCutTask!.folderName}/videoTrack/${track.videoName}`);
                 track.videoEl.preload = 'metadata';
                 track.videoEl.muted = true;
 
-                // 监听视频播放结束，切换到下一个视频
-                track.videoEl.addEventListener('ended', () => {
-                    this.playNextVideo();
-                });
+                track.videoTime = Number(track.videoTime);
+                track.startTime = Number(track.startTime);
+                track.endTime = Number(track.endTime);
             });
+
+            this.isPlaying = false;
             this.currentVideo = videoTracks[0];
             this.preloadNextVideo();
+            this.videoTotalTime = this.getTotalTime();
+            this.calcProgress();
+        },
+        getTotalTime() {
+            let totalTime = 0;
+            for (const track of this.videoTracks) {
+                totalTime += track.endTime - track.startTime;
+            }
+            return totalTime;
+        },
+        getCurrentTime() {
+            let currentTime = 0;
+            // 计算前面视频的时间
+            for (let i = 0; i < this.currentVideoIndex; i++) {
+                const curTrack = this.videoTracks[i];
+                currentTime += curTrack.endTime - curTrack.startTime;
+            }
+
+            // 计算当前视频已播放时间
+            currentTime += this.currentVideo!.videoEl!.currentTime - this.currentVideo!.startTime;
+            return currentTime;
         },
         preloadNextVideo() {
             // 预加载下下个视频
             if (this.currentVideoIndex + 1 < this.videoTracks.length) {
                 const nextVideo = this.videoTracks[this.currentVideoIndex + 1];
-                // 触发加载
-                nextVideo.videoEl!.load();
+                // 视频轨道中可能存在切分过的轨道，两个轨道会用同一个视频文件，如果下一个轨道的视频文件名和当前一致则不需要再加载了
+                if (nextVideo.videoName !== this.currentVideo!.videoName) {
+                    // 触发加载
+                    nextVideo.videoEl!.load();
+                }
             }
         },
         renderVideoFrame() {
@@ -59,23 +101,32 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                 return;
             }
 
-            // 清除Canvas
-            this.canvasCtx!.clearRect(0, 0, this.playCanvasEl!.width, this.playCanvasEl!.height);
+            // 计算视频进度相关 10ms一次
+            if (Date.now() - this.lastStatisticsProgressTime > 10) {
+                this.lastStatisticsProgressTime = Date.now();
+                this.calcProgress();
+            }
 
-            // 绘制当前视频帧
-            this.playCanvasEl!.width = this.currentVideo.videoEl!.videoWidth;
-            this.playCanvasEl!.height = this.currentVideo.videoEl!.videoHeight;
-            this.canvasCtx!.drawImage(
-                this.currentVideo.videoEl!,
-                0, 0, this.playCanvasEl!.width, this.playCanvasEl!.height
-            );
+            // 渲染视频画面
+            this.renderSingleFrame();
+            // 判断是否需要进入到下一个视频 可能存在剪切的视频，需要提前从剪切的地方结束
+            const currentVideoTime = this.currentVideo.videoEl!.currentTime;
+            if (currentVideoTime >= this.currentVideo.endTime || currentVideoTime >= this.currentVideo.videoEl!.duration) {
+                this.playNextVideo();
+            }
 
             // 请求下一帧渲染
             this.animationId = requestAnimationFrame(this.renderVideoFrame);
         },
         playCurrentVideo() {
-            if (!this.currentVideo) {
+            if (!this.currentVideo && !this.videoTracks.length) {
                 return;
+            }
+
+            if (!this.currentVideo) {
+                this.currentVideo = this.videoTracks[0];
+                this.currentVideoIndex = 0;
+                this.currentVideo!.videoEl!.currentTime = 0;
             }
 
             this.isPlaying = true;
@@ -83,9 +134,25 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                 Message.error(`播放失败: ${err}`);
                 this.isPlaying = false;
             });
+            // 当前视频初始播放
+            if (this.currentVideo.videoEl!.currentTime <= this.currentVideo.startTime) {
+                // 存在切分的视频 需要从指定位置开始播放 前面的内容为切分后的
+                this.currentVideo!.videoEl!.currentTime = this.currentVideo.startTime;
+            }
 
             // 开始渲染循环
             this.renderVideoFrame();
+        },
+        calcProgress() {
+            // 当前时间
+            this.videoCurrentTime = this.getCurrentTime();
+
+            // 计算进度条位置
+            this.progressRate = this.videoCurrentTime / this.videoTotalTime;
+            this.progressDotLeft = this.progressLineRect!.width * this.progressRate;
+
+            // 计算剪辑轨道时间帧的信息
+            this.videoFrameInfo.left = this.videoCurrentTime / TIME_STEP * UNIT_LENGTH;
         },
         pauseCurrentVideo() {
             if (!this.currentVideo) {
@@ -115,10 +182,50 @@ export const useVideoPlayStore = defineStore('videoPlay', {
 
             // 切换到下一个视频
             this.currentVideo = this.videoTracks[this.currentVideoIndex];
+            this.currentVideo!.videoEl!.currentTime = 0;
             // 播放新的视频
             this.playCurrentVideo();
             // 预加载下下个视频
             this.preloadNextVideo();
         },
+        movePointVideo(second: number) {
+            let currentTime = second;
+            for (let i = 0; i < this.videoTracks!.length; i++) {
+                const track = this.videoTracks[i];
+                if (currentTime < track.videoTime) {
+                    this.currentVideo = track;
+                    this.currentVideoIndex = i;
+                    break;
+                }
+
+                // 不是当前视频 扣除当前视频的时间
+                currentTime -= track.videoTime;
+            }
+
+            // 设置视频时间 需要注意加上前面裁剪掉的时间
+            this.currentVideo!.videoEl!.currentTime = this.currentVideo!.startTime + currentTime;
+
+            // 渲染当前帧
+            const renderFrame = () => {
+                this.renderSingleFrame();
+                // 监听一次即可
+                this.currentVideo!.videoEl!.removeEventListener('timeupdate', renderFrame);
+            };
+
+            this.currentVideo!.videoEl!.addEventListener('timeupdate', renderFrame);
+            this.calcProgress();
+        },
+        renderSingleFrame() {
+            // 清除Canvas画面
+            this.canvasCtx!.clearRect(0, 0, this.playCanvasEl!.width, this.playCanvasEl!.height);
+
+            // 绘制当前视频帧
+            this.playCanvasEl!.width = this.currentVideo!.videoEl!.videoWidth;
+            this.playCanvasEl!.height = this.currentVideo!.videoEl!.videoHeight;
+            this.canvasCtx!.drawImage(
+                this.currentVideo!.videoEl!,
+                0, 0, this.playCanvasEl!.width, this.playCanvasEl!.height
+            );
+        }
     },
 });

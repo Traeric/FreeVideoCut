@@ -8,6 +8,7 @@ const {
   cutVideo,
   removeSelectFrame,
   cutTaskStore,
+  videoPlayStore,
   moveFramePoint,
   selectVideoTrack,
   timeUtilCount,
@@ -64,7 +65,7 @@ onUnmounted(() => {
         </div>
       </div>
       <div class="right track-right" ref="rightPanelEl" :style="{width: `${trackTotalWith}px`}" @wheel="rightMouseWheel">
-        <div class="video-frame-point" :style="{left: `${cutTaskStore.videoFrameInfo.left}px`}">
+        <div class="video-frame-point" :style="{left: `${videoPlayStore.videoFrameInfo.left}px`}">
           <div class="point-head" @mousedown="moveFramePoint">
             <img src="../../assets/video-frame-dot.svg" alt="NO IMG">
           </div>

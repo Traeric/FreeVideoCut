@@ -9,11 +9,6 @@ import Database from "@tauri-apps/plugin-sql";
  * @param cutTaskStore 剪辑信息
  */
 export async function deleteVideoTrack(cutTaskStore: any) {
-    await invoke('delete_video_track', {
-        workspace: cutTaskStore.currentCutTask!.folderName,
-        videoTrackName: cutTaskStore.selectFrameData.track.videoName,
-        thumbnail: cutTaskStore.selectFrameData.track.thumbnail,
-    });
     // 刷新数据
     cutTaskStore.videoTracks.splice(cutTaskStore.selectFrameData.trackIndex, 1);
     await cutTaskStore.updateVideoTracks(cutTaskStore.videoTracks);

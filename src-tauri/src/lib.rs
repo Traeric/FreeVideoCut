@@ -33,6 +33,8 @@ pub fn run() {
                 video_name TEXT NOT NULL,
                 thumbnail Text NOT NULL,
                 video_time TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
                 has_audio INTEGER NOT NULL,
                 display INTEGER NOT NULL
             );

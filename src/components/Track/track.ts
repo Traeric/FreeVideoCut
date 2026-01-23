@@ -1,53 +1,59 @@
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
-import {computed, Ref, h} from "vue";
-import {CUT_VIDEO_MIN_LENG, EXCEPT_CLASS_NAME, formatTime, timeStep, unitLength} from "../../utils/comonUtils.ts";
-import {Message} from "@arco-design/web-vue";
-import {invoke} from "@tauri-apps/api/core";
+import {computed, h, Ref} from "vue";
+import {CUT_VIDEO_MIN_LENG, EXCEPT_CLASS_NAME, formatTime, TIME_STEP, UNIT_LENGTH} from "../../utils/comonUtils.ts";
+import {Message, Notification} from "@arco-design/web-vue";
 import {VideoTrackInfo} from "../../types/cutTask.ts";
 import ContextMenu from '@imengyu/vue3-context-menu';
-import { Notification } from '@arco-design/web-vue';
 import {deleteVideoTrack, splitVideoAudio} from "./trackMenu.ts";
+import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 
 export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLineRef: Ref<HTMLDivElement | undefined>) => {
     const cutTaskStore = useCutTaskStore();
+    const videoPlayStore = useVideoPlayStore();
 
     // 计算需要多少个单元 5s一个单元
     const timeUtilCount = computed(() => {
         const minWidth = window.window.innerWidth - 90;
 
         // 计算一共需要多少秒
-        let totalTime = 0;
-        cutTaskStore.videoTracks.forEach(track => {
-            totalTime += Number(track.videoTime);
-        });
-        return Math.ceil(Math.max(totalTime / timeStep, minWidth / unitLength));
+        let totalTime = videoPlayStore.videoTotalTime;
+        return Math.ceil(Math.max(totalTime / TIME_STEP, minWidth / UNIT_LENGTH));
     });
 
     // 计算轨道总长度
     const trackTotalWith = computed(() => {
-        return timeUtilCount.value * unitLength;
+        return timeUtilCount.value * UNIT_LENGTH;
     });
 
     const getFormatTime = (currentUnit: number) => {
-        return formatTime(currentUnit * timeStep);
+        return formatTime(currentUnit * TIME_STEP);
     };
 
     const moveFramePoint = (e: MouseEvent) => {
         e.preventDefault();
         const progressLineRect = rightPanelEl.value?.getBoundingClientRect();
+        // 暂停视频
+        const videoIsPlayed = videoPlayStore.isPlaying;
+        if (videoIsPlayed) {
+            videoPlayStore.pauseCurrentVideo();
+        }
         document.onmousemove = (moveE: MouseEvent) => {
             let currentX = moveE.clientX;
             let left = currentX - progressLineRect!.x;
             // 限制位置
             left = Math.max(0, left);
-            left = Math.min(left, progressLineRect!.width);
+            left = Math.min(left, videoPlayStore.videoTotalTime / TIME_STEP * UNIT_LENGTH);
 
-            cutTaskStore.videoFrameInfo.left = left;
-            cutTaskStore.setVideoTime(left);
+            // 设置到视频对应位置
+            videoPlayStore.movePointVideo((left / UNIT_LENGTH) * TIME_STEP);
         };
 
         document.onmouseup = () => {
             document.onmousemove = null;
+            // 恢复播放
+            if (videoIsPlayed) {
+                videoPlayStore.playCurrentVideo();
+            }
         };
     };
 
@@ -59,8 +65,10 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
         left = Math.max(0, left);
         left = Math.min(left, trackTotalWith.value);
 
-        cutTaskStore.videoFrameInfo.left = left;
-        cutTaskStore.setVideoTime(left);
+        videoPlayStore.movePointVideo((left / UNIT_LENGTH) * TIME_STEP);
+        if (videoPlayStore.isPlaying) {
+            videoPlayStore.playCurrentVideo();
+        }
     };
 
     /**
@@ -68,7 +76,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
      */
     const cutVideo = async () => {
         const left = (frameLineRef.value!.getBoundingClientRect().left + rightPanelEl.value!.scrollLeft) - rightPanelEl.value!.getBoundingClientRect().left;
-        let seconds = (left / unitLength) * timeStep;
+        let seconds = (left / UNIT_LENGTH) * TIME_STEP;
         // 计算是第几个视频
         let cutVideoTrack = null;
         for (const track of cutTaskStore.videoTracks) {
@@ -98,27 +106,24 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
             return;
         }
 
-        let newVideoTrackNames = await invoke('cut_video', {
-            workspace: cutTaskStore.currentCutTask!.folderName,
-            cutVideoName: cutVideoTrack.videoName,
-            thumbnail: cutVideoTrack.thumbnail,
-            cutTime: formatTime(seconds),
-        }) as number[];
-
         // 刷新视频轨道
         const partOneVideo: VideoTrackInfo = {
             cutTaskId: cutTaskStore.currentCutTask!.id,
-            videoName: `${newVideoTrackNames[0]}.mp4`,
-            thumbnail: String(newVideoTrackNames[0]),
+            videoName: cutVideoTrack.videoName,
+            thumbnail: cutVideoTrack.thumbnail,
             videoTime: seconds,
+            startTime: cutVideoTrack.startTime,
+            endTime: cutVideoTrack.startTime + seconds,
             display: 0,
             hasAudio: cutVideoTrack.hasAudio,
         };
         const partTwoVideo: VideoTrackInfo = {
             cutTaskId: cutTaskStore.currentCutTask!.id,
-            videoName: `${newVideoTrackNames[1]}.mp4`,
-            thumbnail: String(newVideoTrackNames[1]),
-            videoTime: cutVideoTrack.videoTime - seconds,
+            videoName: cutVideoTrack.videoName,
+            thumbnail: cutVideoTrack.thumbnail,
+            videoTime: cutVideoTrack.endTime - seconds,
+            startTime: cutVideoTrack.startTime + seconds,
+            endTime: cutVideoTrack.endTime,
             display: 0,
             hasAudio: cutVideoTrack.hasAudio,
         };
@@ -213,6 +218,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
         cutVideo,
         removeSelectFrame,
         cutTaskStore,
+        videoPlayStore,
         moveFramePoint,
         selectVideoTrack,
         timeUtilCount,
