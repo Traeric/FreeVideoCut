@@ -170,3 +170,23 @@ pub fn generate_mute_video(app_handle: &AppHandle, video_path: &str, mute_video_
     .output()?;
   Ok(())
 }
+
+// 生成低码率视频 方便播放
+pub fn generate_video_proxy(app_handle: &AppHandle, video_path: &str, proxy_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+  let ffmpeg_path = get_ffmpeg_path(app_handle);
+
+  println!("get video audio, video_path: {}, proxy_path: {}", video_path, proxy_path);
+  Command::new(ffmpeg_path)
+    .args(&[
+      "-i",
+      &video_path,
+      "-vf", "scale=1280:-1", // 缩放到720p
+      "-c:v", "libx264",
+      "-b:v", "500k", // 低码率
+      "-preset", "fast",
+      "-y", // 覆盖已存在的代理文件
+      &proxy_path
+    ])
+    .output()?;
+  Ok(())
+}

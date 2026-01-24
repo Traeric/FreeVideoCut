@@ -27,7 +27,6 @@ export interface VideoTrackInfo {
     select?: boolean,
     left?: number,
     width?: number,
-    thumbnailGetTimer?: number,
     videoEl?: HTMLVideoElement,
 }
 

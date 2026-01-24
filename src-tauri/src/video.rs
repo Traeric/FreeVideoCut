@@ -69,45 +69,32 @@ pub fn create_cut_task_workspace(folder_name: &str) {
  */
 #[tauri::command]
 pub fn add_video_in_track(app_handle: AppHandle, workspace: &str, import_name: &str) -> (String, f64, bool) {
-    let mut workspace_path = context::DEFAULT_URL.to_string();
-    workspace_path.push_str(workspace);
+    let workspace_path = std::path::Path::new(context::DEFAULT_URL).join(workspace);
 
     // 获取视频轨道目录
-    let mut video_track_path = workspace_path.clone();
-    video_track_path.push_str("//videoTrack//");
+    let video_track_path = workspace_path.join("videoTrack");
 
     // 创建视频轨道目录
-    fs::create_dir_all(video_track_path.as_str()).unwrap();
+    fs::create_dir_all(&video_track_path).unwrap();
 
     // 复制视频
-    let mut src_path = workspace_path.clone();
-    src_path.push_str(format!("//import//{}", import_name).as_str());
+    let src_path = workspace_path.join("import").join(import_name);
 
-    let mut dest_path = video_track_path;
     let track_video_name_suffix = utils::get_current_timestamp_millis().to_string();
-    // 创建缩略图目录
-    let mut thumbnail_dir = dest_path.clone();
-    thumbnail_dir.push_str(&track_video_name_suffix);
-    fs::create_dir_all(&thumbnail_dir).unwrap();
 
     // 复制文件到轨道目录
     let track_video_name = format!("{}.mp4", track_video_name_suffix);
-    dest_path.push_str(track_video_name.as_str());
-    utils::copy_file(src_path.as_str(), dest_path.as_str());
+    let src_video_file = video_track_path.join(&track_video_name);
+    utils::copy_file(src_path.to_str().unwrap(), src_video_file.to_str().unwrap());
 
     // 获取视频时长
     let mut video_time: f64 = 0.0;
-    if let Ok(time) = ffmpeg_video::get_video_duration(&app_handle, &dest_path) {
+    if let Ok(time) = ffmpeg_video::get_video_duration(&app_handle, src_video_file.to_str().unwrap()) {
         video_time = time;
     }
 
     // 判断视频是否包含音频流
-    let has_audio = ffmpeg_video::has_audio(&app_handle, &dest_path);
-
-    // 生成视频缩略图
-    std::thread::spawn(move || {
-        generate_thumbnail(&app_handle, dest_path.as_str(), thumbnail_dir);
-    });
+    let has_audio = ffmpeg_video::has_audio(&app_handle, src_video_file.to_str().unwrap());
 
     (track_video_name_suffix, video_time, has_audio)
 }

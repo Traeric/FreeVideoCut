@@ -84,8 +84,6 @@ export const useCutTaskStore = defineStore('cutTask', {
                 await this.refreshImportVideos();
                 // 查询视频轨道
                 await this.refreshVideoTrack();
-                // 获取播放视频链接
-                this.refreshDisplayUrl();
                 // 获取音频轨道
                 await this.refreshAudioTracks();
             });
@@ -103,8 +101,6 @@ export const useCutTaskStore = defineStore('cutTask', {
         async refreshVideoTrack() {
             // 获取视频轨道的数据
             await executeDb(async (db: Database) => {
-                // 先取消缩略图获取的定时器
-                this.videoTracks.forEach(track => clearInterval(track.thumbnailGetTimer));
                 this.videoTracks = await db.select(SELECT_VIDEO_TRACK, [this.currentCutTask!.id]) as VideoTrackInfo[];
             });
 
@@ -123,49 +119,6 @@ export const useCutTaskStore = defineStore('cutTask', {
             // 给每个视频绑定video标签
             const videoPlayStore = useVideoPlayStore();
             await videoPlayStore.initVideoTracks(this);
-
-            // 转换图片url
-            for (const videoTrack of this.videoTracks) {
-                let count = 0;
-                videoTrack.thumbnailGetTimer = setInterval(async () => {
-                    const thumbNameList = await invoke('get_thumbnail', { workspace: this.currentCutTask!.folderName, thumbnail: videoTrack.thumbnail }) as string[];
-                    if (thumbNameList.length === videoTrack.thumbnailList?.length) {
-                        if (count > 5) {
-                            clearInterval(videoTrack.thumbnailGetTimer);
-                            return;
-                        }
-                        count++;
-                        return;
-                    }
-
-                    videoTrack.thumbnailList = thumbNameList.map(item => ({
-                        url: convertFileSrc(item),
-                        width: videoTrack.width! / thumbNameList.length,
-                    }));
-                    count = 0;
-                }, 50);
-            }
-        },
-        refreshDisplayUrl() {
-            this.displayUrlPullTimer = setInterval(() => {
-                const finalVideoName = localStorage.getItem("finalVideoName");
-                invoke("get_final_video_path", {
-                    workspace: this.currentCutTask!.folderName,
-                    videoName: finalVideoName,
-                }).then((res) => {
-                    const url = res as string;
-                    if (this.displayUrlPullTimer && url) {
-                        clearInterval(this.displayUrlPullTimer);
-                        this.displayUrlPullTimer = null;
-
-                        this.displayUrl = convertFileSrc(url) as string;
-                    }
-                });
-            }, 200);
-        },
-        setVideoTime(left: number) {
-            // 计算时间
-            this.videoEl!.currentTime = (left / UNIT_LENGTH) * TIME_STEP;
         },
         async updateVideoTracks(newVideoTracks: VideoTrackInfo[], selectIndex: number = -1) {
             await executeDb(async db => {
@@ -189,20 +142,6 @@ export const useCutTaskStore = defineStore('cutTask', {
                 // 刷新track
                 await this.refreshVideoTrack();
                 this.setSelectFrameData(selectIndex);
-
-                // 生成最终的视频
-                // invoke('synthesis_final_video', {
-                //     workspace: this.currentCutTask!.folderName,
-                //     videoTrackList: this.videoTracks.map(item => item.videoName),
-                // }).then(finalVideoName => {
-                //     if ("bad path" === finalVideoName) {
-                //         Message.error("合成视频出错");
-                //         return;
-                //     }
-                //     localStorage.setItem("finalVideoName", finalVideoName as string);
-                //
-                //     this.refreshDisplayUrl();
-                // });
             });
         },
         async updateAudioTracks(newAudioTracks: AudioTrackInfo[]) {

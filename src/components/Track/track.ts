@@ -1,13 +1,21 @@
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 import {computed, h, Ref} from "vue";
-import {CUT_VIDEO_MIN_LENG, EXCEPT_CLASS_NAME, formatTime, TIME_STEP, UNIT_LENGTH} from "../../utils/comonUtils.ts";
+import {
+    CUT_VIDEO_MIN_LENG,
+    EXCEPT_CLASS_NAME,
+    formatTime,
+    ONE_SECOND_LENGTH,
+    TIME_STEP,
+    UNIT_LENGTH
+} from "../../utils/comonUtils.ts";
 import {Message, Notification} from "@arco-design/web-vue";
 import {VideoTrackInfo} from "../../types/cutTask.ts";
 import ContextMenu from '@imengyu/vue3-context-menu';
 import {deleteVideoTrack, splitVideoAudio} from "./trackMenu.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 
-export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLineRef: Ref<HTMLDivElement | undefined>) => {
+export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
+                         frameLineRef: Ref<HTMLDivElement | undefined>, videoClipRefs: any) => {
     const cutTaskStore = useCutTaskStore();
     const videoPlayStore = useVideoPlayStore();
 
@@ -39,10 +47,10 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
         }
         document.onmousemove = (moveE: MouseEvent) => {
             let currentX = moveE.clientX;
-            let left = currentX - progressLineRect!.x;
+            let left = currentX - progressLineRect!.x + rightPanelEl.value!.scrollLeft;
             // 限制位置
             left = Math.max(0, left);
-            left = Math.min(left, videoPlayStore.videoTotalTime / TIME_STEP * UNIT_LENGTH);
+            left = Math.min(left, videoPlayStore.videoTotalTime * ONE_SECOND_LENGTH);
 
             // 设置到视频对应位置
             videoPlayStore.movePointVideo((left / UNIT_LENGTH) * TIME_STEP);
@@ -111,9 +119,9 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
             cutTaskId: cutTaskStore.currentCutTask!.id,
             videoName: cutVideoTrack.videoName,
             thumbnail: cutVideoTrack.thumbnail,
-            videoTime: seconds,
             startTime: cutVideoTrack.startTime,
             endTime: cutVideoTrack.startTime + seconds,
+            videoTime: seconds,
             display: 0,
             hasAudio: cutVideoTrack.hasAudio,
         };
@@ -121,9 +129,9 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
             cutTaskId: cutTaskStore.currentCutTask!.id,
             videoName: cutVideoTrack.videoName,
             thumbnail: cutVideoTrack.thumbnail,
-            videoTime: cutVideoTrack.endTime - seconds,
             startTime: cutVideoTrack.startTime + seconds,
             endTime: cutVideoTrack.endTime,
+            videoTime: cutVideoTrack.endTime - (cutVideoTrack.startTime + seconds),
             display: 0,
             hasAudio: cutVideoTrack.hasAudio,
         };
@@ -214,6 +222,47 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
         });
     };
 
+    function panelScrollEvent ()  {
+        const scrollPosition = rightPanelEl.value!.scrollLeft;
+        const panelRect = rightPanelEl.value!.getBoundingClientRect();
+        // 计算每个轨道需要展示的区域
+        let preWidth = 0;
+        for (const track of videoPlayStore.videoTracks) {
+            const trackWidth = track.videoTime * ONE_SECOND_LENGTH;
+            // 当前视频轨道起始显示区域
+            const trackStartPosition = Math.max(scrollPosition - preWidth, 0);
+            // 当前视频轨道结束显示区域
+            const trackOverrideLength = Math.max((preWidth + trackWidth) - (scrollPosition + panelRect.width), 0);
+            const trackEndPosition = Math.max(trackWidth - trackOverrideLength, 0);
+
+            const videoClipComp = videoClipRefs.value.find((item: any) => item.$props.clip.id === track.id);
+            videoClipComp?.renderVideoTrack(trackStartPosition, trackEndPosition);
+            preWidth += trackWidth;
+        }
+    }
+
+    const renderSingleTrack = (params: any) => {
+        const scrollPosition = rightPanelEl.value!.scrollLeft;
+        const panelRect = rightPanelEl.value!.getBoundingClientRect();
+        // 计算每个轨道需要展示的区域
+        let preWidth = 0;
+        for (const track of videoPlayStore.videoTracks) {
+            const trackWidth = track.videoTime * ONE_SECOND_LENGTH;
+            if (track.id === params.id) {
+                // 当前视频轨道起始显示区域
+                const trackStartPosition = Math.max(scrollPosition - preWidth, 0);
+                // 当前视频轨道结束显示区域
+                const trackOverrideLength = Math.max((preWidth + trackWidth) - (scrollPosition + panelRect.width), 0);
+                const trackEndPosition = Math.max(trackWidth - trackOverrideLength, 0);
+
+                const videoClipComp = videoClipRefs.value.find((item: any) => item.$props.clip.id === track.id);
+                videoClipComp?.renderVideoTrack(trackStartPosition, trackEndPosition);
+                break;
+            }
+            preWidth += trackWidth;
+        }
+    };
+
     return {
         cutVideo,
         removeSelectFrame,
@@ -226,6 +275,8 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>, frameLin
         selectFrameContextmenu,
         trackTotalWith,
         gotoClickTime,
+        panelScrollEvent,
+        renderSingleTrack,
     };
 };
 

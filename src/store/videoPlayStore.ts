@@ -49,8 +49,9 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.videoTracks = videoTracks;
             const rootPath = await invoke('get_root_path');
             videoTracks.forEach((track: VideoTrackInfo) => {
+                const videoSrc = convertFileSrc(`${rootPath}/${currentCutTask!.folderName}/videoTrack/${track.videoName}`);
                 track.videoEl = document.createElement('video');
-                track.videoEl.src = convertFileSrc(`${rootPath}/${currentCutTask!.folderName}/videoTrack/${track.videoName}`);
+                track.videoEl.src = videoSrc;
                 track.videoEl.preload = 'metadata';
                 track.videoEl.muted = true;
 
@@ -119,7 +120,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.animationId = requestAnimationFrame(this.renderVideoFrame);
         },
         playCurrentVideo() {
-            if (!this.currentVideo && !this.videoTracks.length) {
+            if (!this.videoTracks.length) {
                 return;
             }
 
@@ -155,7 +156,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.videoFrameInfo.left = this.videoCurrentTime / TIME_STEP * UNIT_LENGTH;
         },
         pauseCurrentVideo() {
-            if (!this.currentVideo) {
+            if (!this.videoTracks.length || !this.currentVideo) {
                 return;
             }
 
@@ -208,12 +209,13 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             // 渲染当前帧
             const renderFrame = () => {
                 this.renderSingleFrame();
+                this.calcProgress();
+
                 // 监听一次即可
                 this.currentVideo!.videoEl!.removeEventListener('timeupdate', renderFrame);
             };
 
             this.currentVideo!.videoEl!.addEventListener('timeupdate', renderFrame);
-            this.calcProgress();
         },
         renderSingleFrame() {
             // 清除Canvas画面

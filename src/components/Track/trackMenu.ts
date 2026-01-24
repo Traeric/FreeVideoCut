@@ -1,5 +1,5 @@
 import {invoke} from "@tauri-apps/api/core";
-import {AudioTrackInfo} from "../../types/cutTask.ts";
+import {AudioTrackInfo, VideoTrackInfo} from "../../types/cutTask.ts";
 import {executeDb, UPDATE_VIDEO_HAS_AUDIO} from "../../utils/db.ts";
 import Database from "@tauri-apps/plugin-sql";
 
@@ -9,6 +9,17 @@ import Database from "@tauri-apps/plugin-sql";
  * @param cutTaskStore 剪辑信息
  */
 export async function deleteVideoTrack(cutTaskStore: any) {
+    const deleteVideoName = cutTaskStore.selectFrameData.track.videoName;
+    // 如果当前视频只有这一个轨道引用 则删除
+    const curNameTracks = cutTaskStore.videoTracks.filter((track: VideoTrackInfo) => track.videoName === deleteVideoName);
+    if (curNameTracks.length === 1) {
+        await invoke('delete_video_track', {
+            workspace: cutTaskStore.currentCutTask!.folderName,
+            videoTrackName: deleteVideoName,
+            thumbnail: cutTaskStore.selectFrameData.track.thumbnail,
+        });
+    }
+
     // 刷新数据
     cutTaskStore.videoTracks.splice(cutTaskStore.selectFrameData.trackIndex, 1);
     await cutTaskStore.updateVideoTracks(cutTaskStore.videoTracks);

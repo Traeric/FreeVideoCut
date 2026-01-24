@@ -1,31 +1,35 @@
 <script setup lang="ts">
 import {onMounted, onUnmounted, ref} from "vue";
-import { useTrack, useWheel } from './track.ts';
+import {useTrack, useWheel} from './track.ts';
+import VideoClip from "./VideoClip/VideoClip.vue";
 
 const rightPanelEl = ref<HTMLDivElement>();
 const frameLineRef = ref<HTMLDivElement>();
+const videoClipRefs = ref([]);
 const {
   cutVideo,
   removeSelectFrame,
   cutTaskStore,
   videoPlayStore,
   moveFramePoint,
-  selectVideoTrack,
   timeUtilCount,
   getFormatTime,
-  selectFrameContextmenu,
   trackTotalWith,
   gotoClickTime,
-} = useTrack(rightPanelEl, frameLineRef);
+  panelScrollEvent,
+  renderSingleTrack,
+} = useTrack(rightPanelEl, frameLineRef, videoClipRefs);
 
 const { rightMouseWheel } = useWheel(rightPanelEl);
 
 onMounted(() => {
   document.addEventListener("click", removeSelectFrame);
+  rightPanelEl.value!.addEventListener('scroll', panelScrollEvent);
 });
 
 onUnmounted(() => {
   document.removeEventListener("click", removeSelectFrame);
+  rightPanelEl.value?.removeEventListener('scroll', panelScrollEvent);
 });
 </script>
 
@@ -80,24 +84,13 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="cut-track video-track" :style="{width: `${trackTotalWith}px`}">
-          <div class="single-track" @click="selectVideoTrack">
-            <div class="select-frame"
-                 v-show="cutTaskStore.selectFrameData.show"
-                 :style="{left: `${cutTaskStore.selectFrameData.left}px`, width: `${cutTaskStore.selectFrameData.width}px`}"
-                 @contextmenu="selectFrameContextmenu"
-            ></div>
-            <template v-for="thumbnail in cutTaskStore.getVideoThumbnail">
-              <div v-if="thumbnail.placeholder" class="thumbnail-placeholder" :style="{width: `${thumbnail.width}px`}">
-                <a-skeleton-line :rows="3" />
-              </div>
-              <div v-else :class="{'thumbnail-border': true, 'last-thumbnail-border': thumbnail.last}" :style="{width: `${thumbnail?.width}px`}">
-                <div :class="{'thumbnail-img': true, 'first-thumbnail': thumbnail.first, 'last-thumbnail': thumbnail.last}">
-                  <img :src="thumbnail?.url" alt="NO IMG">
-                </div>
-                <div class="audio" v-if="thumbnail.hasAudio === 1"></div>
-              </div>
-            </template>
-          </div>
+          <template v-for="track of videoPlayStore.videoTracks" :key="track.id">
+            <VideoClip
+                :clip="track"
+                ref="videoClipRefs"
+                @renderSingleTrack="renderSingleTrack"
+            />
+          </template>
         </div>
         <div class="cut-track audio-track" :style="{width: `${trackTotalWith}px`}">
           <div class="track-item" v-for="audio of cutTaskStore.audioTracks" :style="{left: `${audio.left}px`, width: `${audio.width}px`}"></div>

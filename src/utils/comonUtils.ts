@@ -25,6 +25,11 @@ export const TIME_STEP = 5;
 export const UNIT_LENGTH = 90;
 
 /**
+ * 1秒中的长度
+ */
+export const ONE_SECOND_LENGTH = UNIT_LENGTH / TIME_STEP;
+
+/**
  * 剪切视频最短单位
  */
 export const CUT_VIDEO_MIN_LENG = 1;
@@ -33,3 +38,13 @@ export const CUT_VIDEO_MIN_LENG = 1;
  * 不需要去除轨道选择框的class
  */
 export const EXCEPT_CLASS_NAME = ['import-block', 'video-frame-point', 'time-track', 'track-controls', 'mx-context-menu', 'audio-track'];
+
+/**
+ * 轨道padding
+ */
+export const TRACK_GAP = 3;
+
+/**
+ * 轨道间距
+ */
+export const TRACK_SPLIT = 2;
