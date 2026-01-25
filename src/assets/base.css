@@ -120,3 +120,7 @@ body {
 .track-right::-webkit-scrollbar-thumb:active {
   background-color: #ff7d00; /* 按下时进一步加深，增强交互层级 */
 }
+
+.select-cut-task {
+  background-color: #ff9626;
+}

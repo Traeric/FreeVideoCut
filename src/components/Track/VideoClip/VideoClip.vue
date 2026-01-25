@@ -38,6 +38,7 @@ defineExpose({
       @click="selectTrack"
       @contextmenu="selectTrackContextmenu"
   >
+    <img class="select-icon" src="../../../assets/icons/pig.svg" alt="NO IMG">
     <canvas ref="clipCanvasRef"></canvas>
     <div class="audio-track" v-if="clip.hasAudio"></div>
   </div>
@@ -48,8 +49,19 @@ defineExpose({
   cursor move
   background-color rgba(255, 125, 0, .2)
   border 2px solid rgba(255, 125, 0, .3)
+  position relative
+  .select-icon
+    width 26px
+    height 26px
+    position absolute
+    top -13px
+    right -13px
+    z-index 10
+    display none
   &.select-frame
-    border-color #f8d951
+    border-color #fdbfae
+    .select-icon
+      display block
   .audio-track
     height 20px
     background-image url("/audio.svg")

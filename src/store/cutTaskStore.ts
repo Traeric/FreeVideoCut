@@ -13,6 +13,7 @@ import {AudioTrackInfo, CutTask, ImportVideo} from '../types/cutTask.ts';
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
 import {getUUid, TIME_STEP, UNIT_LENGTH} from "../utils/comonUtils.ts";
 import {useVideoPlayStore} from "./videoPlayStore.ts";
+import {Notification} from "@arco-design/web-vue";
 
 
 export const useCutTaskStore = defineStore('cutTask', {
@@ -36,23 +37,54 @@ export const useCutTaskStore = defineStore('cutTask', {
                 let cutList = await db.select(QUERY_CUT_TASK) as any;
                 if (!cutList || !cutList.length) {
                     // 创建一个剪辑任务
-                    const folderName = getUUid();
-                    await db.execute(INSERT_CUT_TASK, [folderName]);
-                    // 创建相应文件夹
-                    await invoke('create_cut_task_workspace', { folderName });
+                    await this.addCutTask(db);
                     cutList = await db.select(QUERY_CUT_TASK) as any;
                 }
 
+                // 按照时间倒排任务
+                cutList.sort((o1: any, o2: any) => o2.id - o1.id);
                 this.cutTaskList = cutList;
-                // 选择第一个当作当前的剪辑任务
-                this.currentCutTask = this.cutTaskList[0];
-                // 查询导入视频
-                await this.refreshImportVideos();
-                // 查询视频轨道
-                await useVideoPlayStore().refreshVideoTrack();
-                // 获取音频轨道
-                await this.refreshAudioTracks();
+                const cutTaskId = localStorage.getItem('cutTaskFolder') ?? cutList[0].folderName;
+                await this.loadTaskInfo(cutTaskId);
             });
+        },
+        async loadTaskInfo(cutTaskFolder: string) {
+            // 切换剪辑任务
+            this.currentCutTask = this.cutTaskList.find(item => item.folderName === cutTaskFolder) ?? null;
+            if (!this.currentCutTask) {
+                Notification.error({
+                    title: '无法加载',
+                    content: `无法切换到当前剪辑任务`,
+                });
+                return;
+            }
+            localStorage.setItem('cutTaskFolder', cutTaskFolder);
+            // 查询导入视频
+            await this.refreshImportVideos();
+            // 查询视频轨道
+            await useVideoPlayStore().refreshVideoTrack();
+            // 获取音频轨道
+            await this.refreshAudioTracks();
+        },
+        async addCutTask(db: Database): Promise<string> {
+            const folderName = getUUid();
+            await db.execute(INSERT_CUT_TASK, [folderName]);
+            // 创建相应文件夹
+            await invoke('create_cut_task_workspace', { folderName });
+            return folderName;
+        },
+        createCutTask() {
+            executeDb((db: Database) => {
+                this.addCutTask(db).then((folderName) => {
+                    // 初始化当前剪辑任务
+                    localStorage.setItem('cutTaskFolder', folderName);
+                    this.cutTaskInit();
+                });
+            })
+        },
+        switchCutTask(switchTask: CutTask) {
+            localStorage.setItem('cutTaskFolder', switchTask.folderName);
+            this.cutTaskInit();
         },
         async refreshImportVideos() {
             const rootPath = await invoke("get_root_path");

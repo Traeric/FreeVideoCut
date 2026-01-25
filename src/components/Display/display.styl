@@ -16,16 +16,42 @@
         color #ff9626
       :deep(.arco-dot-loading-item)
         background-color #ff9626
-  .video-player
-    width 70%
+  .video-area
     height calc(100% - 120px)
-    display flex
-    align-content center
-    justify-content center
-    background-color #000
-    margin 20px auto 0
-    video
+    width 100%
+    position relative
+    .video-player
+      width 70%
       height 100%
+      display flex
+      align-content center
+      justify-content center
+      background-color #000
+      margin 20px auto 0
+    .export
+      position absolute
+      right 20px
+      top 0
+      .export-btn
+        cursor pointer
+        background-color #fff
+        border 2px solid #b5b5b5
+        display flex
+        align-items center
+        gap 5px
+        padding 6px 12px
+        border-radius 4px
+        transition all 0.3s ease
+        user-select none
+        &:hover
+          border-color #2196f3
+          box-shadow 0 4px 8px rgba(33, 150, 243, 0.5);
+          transform translateY(-2px)
+        &:active
+          transform translateY(0)
+        .export-icon
+          width 28px
+          height 28px
   .play-area
     display flex
     height 60px

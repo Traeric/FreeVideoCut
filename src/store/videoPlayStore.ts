@@ -3,7 +3,13 @@ import {VideoFrameInfo, VideoTrackInfo} from "../types/cutTask.ts";
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
 import {Message} from "@arco-design/web-vue";
 import {TIME_STEP, UNIT_LENGTH} from "../utils/comonUtils.ts";
-import {DELETE_VIDEO_TRACK, executeDb, INSERT_VIDEO_TRACK, SELECT_VIDEO_TRACK} from "../utils/db.ts";
+import {
+    DELETE_VIDEO_TRACK,
+    executeDb,
+    INSERT_VIDEO_TRACK,
+    INSERT_VIDEO_TRACK_WITH_ID,
+    SELECT_VIDEO_TRACK
+} from "../utils/db.ts";
 import Database from "@tauri-apps/plugin-sql";
 import {useCutTaskStore} from "./cutTaskStore.ts";
 
@@ -62,7 +68,8 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.currentVideo = this.videoTracks[0];
             this.preloadNextVideo();
             this.videoTotalTime = this.getTotalTime();
-            this.calcProgress();
+            // 设置视频当前时间
+            this.movePointVideo(this.videoTotalTime < this.videoCurrentTime ? this.videoTotalTime : this.videoCurrentTime);
         },
         getTotalTime() {
             let totalTime = 0;
@@ -80,7 +87,8 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             }
 
             // 计算当前视频已播放时间
-            currentTime += this.currentVideo!.videoEl!.currentTime - this.currentVideo!.startTime;
+            const currentVideoTime = this.currentVideo?.videoEl!.currentTime ?? 0;
+            currentTime += currentVideoTime > this.currentVideo!.startTime ? currentVideoTime - this.currentVideo!.startTime : 0;
             return currentTime;
         },
         preloadNextVideo() {
@@ -191,7 +199,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             let currentTime = second;
             for (let i = 0; i < this.videoTracks!.length; i++) {
                 const track = this.videoTracks[i];
-                if (currentTime < track.videoTime) {
+                if (currentTime <= track.videoTime) {
                     this.currentVideo = track;
                     this.currentVideoIndex = i;
                     break;
@@ -254,7 +262,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             const videoPlayStore = useVideoPlayStore();
             await videoPlayStore.initVideoTracks();
         },
-        async updateVideoTracks(newVideoTracks: VideoTrackInfo[], _selectIndex: number = -1) {
+        async updateVideoTracks(newVideoTracks: VideoTrackInfo[], selectIndex: number = -1) {
             const { currentCutTask } = useCutTaskStore();
             await executeDb(async db => {
                 // 先删除已有的视频轨道
@@ -262,20 +270,38 @@ export const useVideoPlayStore = defineStore('videoPlay', {
 
                 let display = 0;
                 for (const track of newVideoTracks) {
-                    await db.execute(INSERT_VIDEO_TRACK, [
-                        currentCutTask!.id,
-                        track.videoName,
-                        track.thumbnail,
-                        track.videoTime,
-                        track.startTime,
-                        track.endTime,
-                        display++,
-                        track.hasAudio,
-                    ]);
+                    if (track.id) {
+                        await db.execute(INSERT_VIDEO_TRACK_WITH_ID, [
+                            track.id,
+                            currentCutTask!.id,
+                            track.videoName,
+                            track.thumbnail,
+                            track.videoTime,
+                            track.startTime,
+                            track.endTime,
+                            display++,
+                            track.hasAudio,
+                        ]);
+                    } else {
+                        await db.execute(INSERT_VIDEO_TRACK, [
+                            currentCutTask!.id,
+                            track.videoName,
+                            track.thumbnail,
+                            track.videoTime,
+                            track.startTime,
+                            track.endTime,
+                            display++,
+                            track.hasAudio,
+                        ]);
+                    }
                 }
 
                 // 刷新track
                 await this.refreshVideoTrack();
+                // 选中track
+                if (this.videoTracks[selectIndex]) {
+                    this.videoTracks[selectIndex].select = true;
+                }
             });
         },
     },

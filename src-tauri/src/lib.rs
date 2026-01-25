@@ -5,6 +5,7 @@ mod context;
 mod utils;
 mod video;
 mod track;
+mod export;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -65,6 +66,7 @@ pub fn run() {
           video::delete_video_track,
           video::get_final_video_path,
           track::split_video_audio,
+          export::export_final_video,
       ])
       .run(tauri::generate_context!())
         .expect("error while running tauri application");

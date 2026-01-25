@@ -18,6 +18,11 @@ export const INSERT_VIDEO_TRACK = `
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `;
 
+export const INSERT_VIDEO_TRACK_WITH_ID = `
+    INSERT INTO video_track (id, cut_task_id, video_name, thumbnail, video_time, start_time, end_time, display, has_audio)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+`;
+
 export const SELECT_VIDEO_TRACK = `
     SELECT
         id, cut_task_id as cutTaskId, video_name as videoName, display, thumbnail, has_audio as hasAudio, video_time as videoTime,

@@ -94,6 +94,7 @@ export const useVideoClip = (clip: any,
      */
     const selectTrack = (e: MouseEvent) => {
         e.stopPropagation();
+        clip.select = true;
         emit('selectTrack', { id: clip.id });
     };
 

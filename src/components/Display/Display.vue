@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 import {onMounted, ref, watch} from "vue";
 import {formatTime} from "../../utils/comonUtils.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
+import Export from "../Export/Export.vue";
 
-const cutTaskStore = useCutTaskStore();
 const videoPlayStore = useVideoPlayStore();
 const progressLineEl = ref<HTMLDivElement>();
 const playCanvasEl = ref<HTMLCanvasElement>();
+const exportModelVisible = ref(false);
 const mute = ref(false);
 const videoVolume = ref(50);
 
@@ -65,6 +65,10 @@ const muteVideo = (isMute: boolean) => {
   // displayVideoEl.value!.muted = isMute;
 };
 
+const exportVideo = async () => {
+  exportModelVisible.value = true;
+};
+
 onMounted(() => {
   videoPlayStore.init(playCanvasEl.value!, progressLineEl.value!);
 });
@@ -72,79 +76,85 @@ onMounted(() => {
 
 <template>
   <div class="display">
-    <div class="loading" v-if="false">
-      <a-spin class="spin" tip="视频合成中" dot></a-spin>
-    </div>
-    <div class="video-player">
-      <canvas ref="playCanvasEl"></canvas>
+    <div class="video-area">
+      <div class="video-player">
+        <canvas ref="playCanvasEl"></canvas>
+      </div>
+      <div class="export">
+        <div class="export-btn" @click="exportVideo">
+          <img class="export-icon" src="../../assets/icons/dog.svg" alt="NO MG">
+          <div class="text">导出视频</div>
+        </div>
+        <Export v-model:visible="exportModelVisible" />
+      </div>
     </div>
     <div class="play-area">
-    <div class="control">
-      <div class="play-icon">
-        <img
-            v-if="!videoPlayStore.isPlaying"
-            @click="playVideo"
-            src="../../assets/icons/play.svg"
-            alt="NO IMG"
-            class="icon"
-        >
-        <img
-            v-else
-            @click="pauseVideo"
-            src="../../assets/icons/pause.svg"
-            alt="NO IMG"
-            class="icon pause-icon"
-        >
-      </div>
-
-      <div class="audio-icon">
-        <a-popover>
+      <div class="control">
+        <div class="play-icon">
           <img
-              v-if="!mute"
-              @click="muteVideo(!mute)"
-              src="../../assets/icons/audio.svg"
+              v-if="!videoPlayStore.isPlaying"
+              @click="playVideo"
+              src="../../assets/icons/play.svg"
               alt="NO IMG"
               class="icon"
           >
-          <template #content>
-            <div class="volum-setting">
-              <a-slider v-model="videoVolume" class="setting" :default-value="50" status="warning" />
-              <a-progress :steps="10" size="small" :percent="videoVolume / 100" status="warning" />
-            </div>
-          </template>
-        </a-popover>
-        <img
-            v-if="mute"
-            src="../../assets/icons/mute.svg"
-            alt="NO IMG"
-            class="icon mute-icon"
-            @click="muteVideo(!mute)"
-        >
-      </div>
-    </div>
-    <div class="progress">
-      <div
-          class="progress-line"
-          ref="progressLineEl"
-          @click="gotoPosition"
-      >
-        <div class="passed" :style="{width: `${videoPlayStore.progressDotLeft}px`}"></div>
-        <div class="progress-bar" :style="{left: `${videoPlayStore.progressDotLeft}px`}">
           <img
-            @mousedown="dragVideoDown"
-            src="../../assets/progress-dot.svg"
-            alt="NO IMG"
+              v-else
+              @click="pauseVideo"
+              src="../../assets/icons/pause.svg"
+              alt="NO IMG"
+              class="icon pause-icon"
+          >
+        </div>
+
+        <div class="audio-icon">
+          <a-popover>
+            <img
+                v-if="!mute"
+                @click="muteVideo(!mute)"
+                src="../../assets/icons/audio.svg"
+                alt="NO IMG"
+                class="icon"
+            >
+            <template #content>
+              <div class="volum-setting">
+                <a-slider v-model="videoVolume" class="setting" :default-value="50" status="warning" />
+                <a-progress :steps="10" size="small" :percent="videoVolume / 100" status="warning" />
+              </div>
+            </template>
+          </a-popover>
+          <img
+              v-if="mute"
+              src="../../assets/icons/mute.svg"
+              alt="NO IMG"
+              class="icon mute-icon"
+              @click="muteVideo(!mute)"
           >
         </div>
       </div>
-      <a-progress size="mini" status='warning' :percent="videoPlayStore.progressRate"/>
+      <div class="progress">
+        <div
+            class="progress-line"
+            ref="progressLineEl"
+            @click="gotoPosition"
+        >
+          <div class="passed" :style="{width: `${videoPlayStore.progressDotLeft}px`}"></div>
+          <div class="progress-bar" :style="{left: `${videoPlayStore.progressDotLeft}px`}">
+            <img
+              @mousedown="dragVideoDown"
+              src="../../assets/progress-dot.svg"
+              alt="NO IMG"
+            >
+          </div>
+        </div>
+        <a-progress size="mini" status='warning' :percent="videoPlayStore.progressRate"/>
+      </div>
+      <div class="time">
+        <span class="played">{{ formatTime(videoPlayStore.videoCurrentTime) }}</span>
+        <icon-oblique-line />
+        <span>{{ formatTime(videoPlayStore.videoTotalTime) }}</span>
+      </div>
     </div>
-    <div class="time">
-      <span class="played">{{ formatTime(videoPlayStore.videoCurrentTime) }}</span>
-      <icon-oblique-line />
-      <span>{{ formatTime(videoPlayStore.videoTotalTime) }}</span>
-    </div>
-  </div>
   </div>
 </template>
 

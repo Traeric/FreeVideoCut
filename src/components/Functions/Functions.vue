@@ -2,7 +2,7 @@
 import {open} from "@tauri-apps/plugin-dialog";
 import {invoke} from "@tauri-apps/api/core";
 import {executeDb, INSERT_IMPORT_VIDEO} from '../../utils/db.ts';
-import {ImportVideo, VideoTrackInfo} from "../../types/cutTask.ts";
+import {CutTask, ImportVideo, VideoTrackInfo} from "../../types/cutTask.ts";
 import Database from "@tauri-apps/plugin-sql";
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
@@ -66,6 +66,14 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
     await videoPlayStore.updateVideoTracks(newVideoTracks, selectIndex);
   });
 };
+
+const newCutTask = () => {
+  cutTaskStore.createCutTask();
+};
+
+const switchCutTask = (cutTask: CutTask) => {
+  cutTaskStore.switchCutTask(cutTask);
+};
 </script>
 
 <template>
@@ -79,17 +87,25 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
       >
         导入视频
       </a-button>
-      <a-button
-        type="primary"
-        shape="round"
-        class="new-cut-task"
-      >
-        新建剪辑
-      </a-button>
+      <a-popconfirm content="是否要开始新的剪辑任务？" type="success" @ok="newCutTask">
+        <a-button
+          type="primary"
+          shape="round"
+          class="new-cut-task"
+        >
+          新建剪辑
+        </a-button>
+      </a-popconfirm>
       <a-dropdown-button type="primary" shape="round">
         历史剪辑
         <template #content>
-          <a-doption v-for="value in cutTaskStore.cutTaskList">{{ value.createTime }}</a-doption>
+          <a-doption
+              v-for="value in cutTaskStore.cutTaskList"
+              :class="{
+                'select-cut-task': value.id === cutTaskStore.currentCutTask?.id
+              }"
+              @click="switchCutTask(value)"
+          >{{ value.createTime }}</a-doption>
         </template>
       </a-dropdown-button>
     </div>
