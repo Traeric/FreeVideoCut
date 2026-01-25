@@ -3,6 +3,9 @@ import {VideoFrameInfo, VideoTrackInfo} from "../types/cutTask.ts";
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
 import {Message} from "@arco-design/web-vue";
 import {TIME_STEP, UNIT_LENGTH} from "../utils/comonUtils.ts";
+import {DELETE_VIDEO_TRACK, executeDb, INSERT_VIDEO_TRACK, SELECT_VIDEO_TRACK} from "../utils/db.ts";
+import Database from "@tauri-apps/plugin-sql";
+import {useCutTaskStore} from "./cutTaskStore.ts";
 
 export const useVideoPlayStore = defineStore('videoPlay', {
     state: () => {
@@ -40,28 +43,23 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.playCanvasEl = canvasEl;
             this.canvasCtx = canvasEl.getContext('2d');
         },
-        async initVideoTracks(cutStore: any) {
-            const { videoTracks, currentCutTask } = cutStore;
-            if (!videoTracks || !videoTracks.length) {
+        async initVideoTracks() {
+            const { currentCutTask } = useCutTaskStore();
+            if (!this.videoTracks || !this.videoTracks.length) {
                 return;
             }
 
-            this.videoTracks = videoTracks;
             const rootPath = await invoke('get_root_path');
-            videoTracks.forEach((track: VideoTrackInfo) => {
+            this.videoTracks.forEach((track: VideoTrackInfo) => {
                 const videoSrc = convertFileSrc(`${rootPath}/${currentCutTask!.folderName}/videoTrack/${track.videoName}`);
                 track.videoEl = document.createElement('video');
                 track.videoEl.src = videoSrc;
                 track.videoEl.preload = 'metadata';
                 track.videoEl.muted = true;
-
-                track.videoTime = Number(track.videoTime);
-                track.startTime = Number(track.startTime);
-                track.endTime = Number(track.endTime);
             });
 
             this.isPlaying = false;
-            this.currentVideo = videoTracks[0];
+            this.currentVideo = this.videoTracks[0];
             this.preloadNextVideo();
             this.videoTotalTime = this.getTotalTime();
             this.calcProgress();
@@ -228,6 +226,57 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                 this.currentVideo!.videoEl!,
                 0, 0, this.playCanvasEl!.width, this.playCanvasEl!.height
             );
-        }
+        },
+        async refreshVideoTrack() {
+            const { currentCutTask } = useCutTaskStore();
+            // 获取视频轨道的数据
+            await executeDb(async (db: Database) => {
+                this.videoTracks = await db.select(SELECT_VIDEO_TRACK, [currentCutTask!.id]) as VideoTrackInfo[];
+            });
+
+            // 轨道排序
+            this.videoTracks.sort((o1, o2) => o1.display - o2.display);
+
+            // 计算每个轨道的位置信息
+            let prevTrack: VideoTrackInfo | null = null;
+            this.videoTracks.forEach(track => {
+                track.width = track.videoTime * (UNIT_LENGTH / TIME_STEP);
+                // @ts-ignore
+                track.left = (prevTrack !== null && prevTrack !== undefined) ? (prevTrack.left + prevTrack.width) : 0;
+                prevTrack = track;
+
+                track.videoTime = Number(track.videoTime);
+                track.startTime = Number(track.startTime);
+                track.endTime = Number(track.endTime);
+            });
+
+            // 给每个视频绑定video标签
+            const videoPlayStore = useVideoPlayStore();
+            await videoPlayStore.initVideoTracks();
+        },
+        async updateVideoTracks(newVideoTracks: VideoTrackInfo[], _selectIndex: number = -1) {
+            const { currentCutTask } = useCutTaskStore();
+            await executeDb(async db => {
+                // 先删除已有的视频轨道
+                await db.execute(DELETE_VIDEO_TRACK, [currentCutTask!.id]);
+
+                let display = 0;
+                for (const track of newVideoTracks) {
+                    await db.execute(INSERT_VIDEO_TRACK, [
+                        currentCutTask!.id,
+                        track.videoName,
+                        track.thumbnail,
+                        track.videoTime,
+                        track.startTime,
+                        track.endTime,
+                        display++,
+                        track.hasAudio,
+                    ]);
+                }
+
+                // 刷新track
+                await this.refreshVideoTrack();
+            });
+        },
     },
 });

@@ -5,8 +5,10 @@ import {executeDb, INSERT_IMPORT_VIDEO} from '../../utils/db.ts';
 import {ImportVideo, VideoTrackInfo} from "../../types/cutTask.ts";
 import Database from "@tauri-apps/plugin-sql";
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
+import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 
 const cutTaskStore = useCutTaskStore();
+const videoPlayStore = useVideoPlayStore();
 
 const openUploadVideo = async () => {
   const selectPath = await open({
@@ -37,9 +39,9 @@ const openUploadVideo = async () => {
 
 const addVideoInTrack = async (videoInfo: ImportVideo) => {
   // 生成当前的display
-  let selectIndex = cutTaskStore.videoTracks.findIndex(item => item.select);
+  let selectIndex = videoPlayStore.videoTracks.findIndex(item => item.select);
   if (selectIndex === -1) {
-    selectIndex = cutTaskStore.videoTracks.length;
+    selectIndex = videoPlayStore.videoTracks.length;
   }
 
   invoke('add_video_in_track', {
@@ -58,10 +60,10 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
       display: 0,
       hasAudio: Number(videoInfoArr[2]),
     };
-    const newVideoTracks = cutTaskStore.videoTracks.slice(0);
+    const newVideoTracks = videoPlayStore.videoTracks.slice(0);
     newVideoTracks.splice(selectIndex, 0, addVideo);
 
-    await cutTaskStore.updateVideoTracks(newVideoTracks, selectIndex);
+    await videoPlayStore.updateVideoTracks(newVideoTracks, selectIndex);
   });
 };
 </script>

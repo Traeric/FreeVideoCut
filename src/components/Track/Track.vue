@@ -18,6 +18,7 @@ const {
   gotoClickTime,
   panelScrollEvent,
   renderSingleTrack,
+  selectVideoTrack,
 } = useTrack(rightPanelEl, frameLineRef, videoClipRefs);
 
 const { rightMouseWheel } = useWheel(rightPanelEl);
@@ -89,6 +90,7 @@ onUnmounted(() => {
                 :clip="track"
                 ref="videoClipRefs"
                 @renderSingleTrack="renderSingleTrack"
+                @selectTrack="selectVideoTrack"
             />
           </template>
         </div>

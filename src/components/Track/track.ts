@@ -1,5 +1,5 @@
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
-import {computed, h, Ref} from "vue";
+import {computed, Ref} from "vue";
 import {
     CUT_VIDEO_MIN_LENG,
     EXCEPT_CLASS_NAME,
@@ -10,8 +10,6 @@ import {
 } from "../../utils/comonUtils.ts";
 import {Message, Notification} from "@arco-design/web-vue";
 import {VideoTrackInfo} from "../../types/cutTask.ts";
-import ContextMenu from '@imengyu/vue3-context-menu';
-import {deleteVideoTrack, splitVideoAudio} from "./trackMenu.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 
 export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
@@ -87,7 +85,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
         let seconds = (left / UNIT_LENGTH) * TIME_STEP;
         // 计算是第几个视频
         let cutVideoTrack = null;
-        for (const track of cutTaskStore.videoTracks) {
+        for (const track of videoPlayStore.videoTracks) {
             if (track.videoTime === seconds) {
                 Message.error('不可剪切');
                 return;
@@ -136,7 +134,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
             hasAudio: cutVideoTrack.hasAudio,
         };
         const newVideoTracks = [];
-        for (const track of cutTaskStore.videoTracks) {
+        for (const track of videoPlayStore.videoTracks) {
             if (track === cutVideoTrack) {
                 // 替换成两个切分后的视频
                 newVideoTracks.push(partOneVideo);
@@ -147,8 +145,8 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
             newVideoTracks.push(track);
         }
 
-        const currentSelectIndex = cutTaskStore.videoTracks.findIndex(item => item.select);
-        await cutTaskStore.updateVideoTracks(newVideoTracks, currentSelectIndex);
+        const currentSelectIndex = videoPlayStore.videoTracks.findIndex(item => item.select);
+        await videoPlayStore.updateVideoTracks(newVideoTracks, currentSelectIndex);
     };
 
     /**
@@ -156,20 +154,11 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
      *
      * @param e MouseEvent
      */
-    const selectVideoTrack = (e: MouseEvent) => {
-        e.stopPropagation();
-        const rightRect = rightPanelEl.value!.getBoundingClientRect();
-        const left = (e.clientX + rightPanelEl.value!.scrollLeft) - rightRect.x;
-        // 计算当前选中了哪个轨道
-        const selectTrackIndex = cutTaskStore.videoTracks.findIndex(track => left > track.left! && left < track.left! + track.width!);
-        const selectTrack = cutTaskStore.videoTracks[selectTrackIndex] as VideoTrackInfo;
-        if (!selectTrack) {
-            Message.warning("无法选中轨道");
-            return;
-        }
-
-        // 设置选中框信息
-        cutTaskStore.setSelectFrameData(selectTrackIndex);
+    const selectVideoTrack = ({ id }: { id: number }) => {
+        // 取消所有选框
+        videoPlayStore.videoTracks.forEach(track => track.select = false);
+        // 选中当前框
+        videoPlayStore.videoTracks!.find(track => track.id === id)!.select = true;
     };
 
     const removeSelectFrame = (e: MouseEvent) => {
@@ -181,45 +170,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
             parentNode = parentNode.parentNode;
         }
 
-        cutTaskStore.removeSelectFrame();
-    };
-
-    const selectFrameContextmenu = (e: MouseEvent) => {
-        e.preventDefault();
-        ContextMenu.showContextMenu({
-            x: e.x,
-            y: e.y,
-            theme: 'mac dark',
-            items: [
-                {
-                    label: "删除视频轨道",
-                    icon: h('img', {
-                        src: '/delete.svg',
-                        style: {
-                            width: '20px',
-                            height: '20px',
-                        },
-                    }),
-                    onClick: () => {
-                        deleteVideoTrack(cutTaskStore);
-                    },
-                },
-                {
-                    label: "音频分离",
-                    icon: h('img', {
-                        src: '/split.svg',
-                        style: {
-                            width: '20px',
-                            height: '20px',
-                        }
-                    }),
-                    disabled: !cutTaskStore.selectFrameData.track.hasAudio,
-                    onClick: () => {
-                        splitVideoAudio(cutTaskStore);
-                    },
-                }
-            ]
-        });
+        videoPlayStore.videoTracks.forEach(track => track.select = false);
     };
 
     function panelScrollEvent ()  {
@@ -272,7 +223,6 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
         selectVideoTrack,
         timeUtilCount,
         getFormatTime,
-        selectFrameContextmenu,
         trackTotalWith,
         gotoClickTime,
         panelScrollEvent,

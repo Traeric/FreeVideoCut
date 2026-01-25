@@ -212,8 +212,8 @@ pub fn cut_video(app_handle: AppHandle, workspace: &str, cut_video_name: &str, t
 }
 
 #[tauri::command]
-pub fn delete_video_track(workspace: &str, video_track_name: &str, thumbnail: &str) {
-    match remove_video_track(workspace, video_track_name, thumbnail) {
+pub fn delete_video_track(workspace: &str, video_track_name: &str) {
+    match remove_video_track(workspace, video_track_name) {
         Ok(()) => {
             println!("removed video track");
         },
@@ -223,12 +223,11 @@ pub fn delete_video_track(workspace: &str, video_track_name: &str, thumbnail: &s
     }
 }
 
-fn remove_video_track(workspace: &str, video_track_name: &str, thumbnail: &str) -> Result<(), std::io::Error> {
+fn remove_video_track(workspace: &str, video_track_name: &str) -> Result<(), std::io::Error> {
     // 删除对应的视频文件以及缩略图
     let video_track_path = std::path::Path::new(context::DEFAULT_URL).join(workspace).join("videoTrack");
-    println!("remove video track path: {}, video: {}, thumbnail: {}", video_track_path.to_str().unwrap(), video_track_name, thumbnail);
+    println!("remove video track path: {}, video: {}", video_track_path.to_str().unwrap(), video_track_name);
     fs::remove_file(video_track_path.join(video_track_name))?;
-    fs::remove_dir_all(video_track_path.join(thumbnail))?;
 
     Ok(())
 }

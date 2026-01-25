@@ -1,18 +1,15 @@
 import {defineStore} from 'pinia';
 import {
     DELETE_AUDIO_TRACK,
-    DELETE_VIDEO_TRACK,
     executeDb,
     INSERT_AUDIO_TRACK,
     INSERT_CUT_TASK,
-    INSERT_VIDEO_TRACK,
     QUERY_CUT_TASK,
     SELECT_AUDIO_TRACK,
-    SELECT_IMPORT_VIDEO,
-    SELECT_VIDEO_TRACK
+    SELECT_IMPORT_VIDEO
 } from "../utils/db.ts";
 import Database from "@tauri-apps/plugin-sql";
-import {AudioTrackInfo, CutTask, ImportVideo, VideoTrackInfo} from '../types/cutTask.ts';
+import {AudioTrackInfo, CutTask, ImportVideo} from '../types/cutTask.ts';
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
 import {getUUid, TIME_STEP, UNIT_LENGTH} from "../utils/comonUtils.ts";
 import {useVideoPlayStore} from "./videoPlayStore.ts";
@@ -24,44 +21,13 @@ export const useCutTaskStore = defineStore('cutTask', {
             cutTaskList: [] as CutTask[],
             importVideoList: [] as ImportVideo[],
             videoEl: null as HTMLVideoElement | null, // TODO 待删除
-            videoTracks: [] as VideoTrackInfo[],
             audioTracks: [] as AudioTrackInfo[],
             currentCutTask: null as CutTask | null,
             displayUrl: "",
             displayUrlPullTimer: null as number | null,
-            selectFrameData: {
-                show: false,
-                width: 0,
-                left: 0,
-                track: null,
-                trackIndex: 0,
-            } as Record<string, any>,
         };
     },
     getters: {
-        /**
-         * 获取所有视频轨道的缩略图集合
-         *
-         * @param state 当前state的变量
-         */
-        getVideoThumbnail: (state) => {
-            let allThumbnails: any[] = [];
-            for (const track of state.videoTracks) {
-                const thumbnailList = track.thumbnailList! as any[];
-                if (!thumbnailList || !thumbnailList.length) {
-                    allThumbnails.push({
-                        placeholder: true,
-                        width: track.videoTime / TIME_STEP * UNIT_LENGTH,
-                    });
-                    continue;
-                }
-                thumbnailList[0].first = true;
-                thumbnailList[thumbnailList.length - 1].last = true;
-                thumbnailList.forEach(item => item.hasAudio = track.hasAudio);
-                allThumbnails = [...allThumbnails, ...thumbnailList];
-            }
-            return allThumbnails;
-        },
     },
     actions: {
         async cutTaskInit() {
@@ -83,7 +49,7 @@ export const useCutTaskStore = defineStore('cutTask', {
                 // 查询导入视频
                 await this.refreshImportVideos();
                 // 查询视频轨道
-                await this.refreshVideoTrack();
+                await useVideoPlayStore().refreshVideoTrack();
                 // 获取音频轨道
                 await this.refreshAudioTracks();
             });
@@ -96,52 +62,6 @@ export const useCutTaskStore = defineStore('cutTask', {
                 this.importVideoList.forEach((videoInfo: any) => {
                     videoInfo.url = convertFileSrc(`${rootPath}\\${this.currentCutTask!.folderName}\\import\\${videoInfo.importName}`);
                 });
-            });
-        },
-        async refreshVideoTrack() {
-            // 获取视频轨道的数据
-            await executeDb(async (db: Database) => {
-                this.videoTracks = await db.select(SELECT_VIDEO_TRACK, [this.currentCutTask!.id]) as VideoTrackInfo[];
-            });
-
-            // 轨道排序
-            this.videoTracks.sort((o1, o2) => o1.display - o2.display);
-
-            // 计算每个轨道的位置信息
-            let prevTrack: VideoTrackInfo | null = null;
-            this.videoTracks.forEach(track => {
-                track.width = track.videoTime * (UNIT_LENGTH / TIME_STEP);
-                // @ts-ignore
-                track.left = (prevTrack !== null && prevTrack !== undefined) ? (prevTrack.left + prevTrack.width) : 0;
-                prevTrack = track;
-            });
-
-            // 给每个视频绑定video标签
-            const videoPlayStore = useVideoPlayStore();
-            await videoPlayStore.initVideoTracks(this);
-        },
-        async updateVideoTracks(newVideoTracks: VideoTrackInfo[], selectIndex: number = -1) {
-            await executeDb(async db => {
-                // 先删除已有的视频轨道
-                await db.execute(DELETE_VIDEO_TRACK, [this.currentCutTask!.id]);
-
-                let display = 0;
-                for (const track of newVideoTracks) {
-                    await db.execute(INSERT_VIDEO_TRACK, [
-                        this.currentCutTask!.id,
-                        track.videoName,
-                        track.thumbnail,
-                        track.videoTime,
-                        track.startTime,
-                        track.endTime,
-                        display++,
-                        track.hasAudio,
-                    ]);
-                }
-
-                // 刷新track
-                await this.refreshVideoTrack();
-                this.setSelectFrameData(selectIndex);
             });
         },
         async updateAudioTracks(newAudioTracks: AudioTrackInfo[]) {
@@ -176,30 +96,5 @@ export const useCutTaskStore = defineStore('cutTask', {
                 });
             });
         },
-        setSelectFrameData(selectTrackIndex: number) {
-            if (selectTrackIndex === -1) {
-                this.removeSelectFrame();
-                return;
-            }
-
-            const selectTrack = this.videoTracks[selectTrackIndex];
-            // 标记当前轨道被选中
-            this.videoTracks.forEach(track => track.select = false);
-            selectTrack.select = true;
-
-            this.selectFrameData.show = true;
-            this.selectFrameData.left = selectTrack.left!;
-            this.selectFrameData.width = selectTrack.width!;
-            this.selectFrameData.track = selectTrack;
-            this.selectFrameData.trackIndex = selectTrackIndex;
-        },
-        removeSelectFrame() {
-            this.videoTracks.forEach(track => track.select = false);
-            this.selectFrameData.show = false;
-            this.selectFrameData.left = 0;
-            this.selectFrameData.width = 0;
-            this.selectFrameData.track = null;
-            this.selectFrameData.trackIndex = -1;
-        }
     },
 });
