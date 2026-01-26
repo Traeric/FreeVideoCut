@@ -48,3 +48,15 @@ export const TRACK_GAP = 3;
  * 轨道间距
  */
 export const TRACK_SPLIT = 2;
+
+/**
+ * 默认导出名称
+ */
+export const DEFAULT_EXPORT_VIDEO_NAME = 'FreeVideoCut';
+
+export enum VideoFormatEnum {
+    MP4,
+    MOV
+}
+
+export const VIDEO_SUFFIX_NAME = ['mp4', 'mov'];
