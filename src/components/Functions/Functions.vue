@@ -59,6 +59,7 @@ const addVideoInTrack = async (videoInfo: ImportVideo) => {
       endTime: Number(videoInfoArr[1]),
       display: 0,
       hasAudio: Number(videoInfoArr[2]),
+      originName: videoInfo.originalName,
     };
     const newVideoTracks = videoPlayStore.videoTracks.slice(0);
     newVideoTracks.splice(selectIndex, 0, addVideo);
@@ -91,12 +92,13 @@ const switchCutTask = (cutTask: CutTask) => {
         <a-button
           type="primary"
           shape="round"
+          status="warning"
           class="new-cut-task"
         >
           新建剪辑
         </a-button>
       </a-popconfirm>
-      <a-dropdown-button type="primary" shape="round">
+      <a-dropdown-button type="primary" status="warning" shape="round">
         历史剪辑
         <template #content>
           <a-doption
@@ -118,7 +120,7 @@ const switchCutTask = (cutTask: CutTask) => {
           />
           <a-button
             class="add"
-            type="dashed"
+            type="primary"
             shape="circle"
             size="mini"
             status="warning"

@@ -34,6 +34,7 @@ pub fn run() {
                 video_name TEXT NOT NULL,
                 thumbnail Text NOT NULL,
                 video_time TEXT NOT NULL,
+                origin_name TEXT NOT NULL,
                 start_time TEXT NOT NULL,
                 end_time TEXT NOT NULL,
                 has_audio INTEGER NOT NULL,
@@ -44,8 +45,10 @@ pub fn run() {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 cut_task_id INTEGER NOT NULL,
                 audio_name TEXT NOT NULL,
+                origin_name TEXT NOT NULL,
                 audio_time TEXT NOT NULL,
                 start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
                 display INTEGER NOT NULL
             );
         "#,

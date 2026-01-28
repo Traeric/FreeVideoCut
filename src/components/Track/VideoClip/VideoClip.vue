@@ -48,8 +48,11 @@ defineExpose({
 .video-clip
   cursor move
   background-color rgba(255, 125, 0, .2)
-  border 2px solid rgba(255, 125, 0, .3)
+  border 2px solid transparent
   position relative
+  border-radius 4px
+  canvas
+    border-radius 4px
   .select-icon
     width 26px
     height 26px

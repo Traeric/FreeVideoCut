@@ -26,7 +26,7 @@ export const INSERT_VIDEO_TRACK_WITH_ID = `
 export const SELECT_VIDEO_TRACK = `
     SELECT
         id, cut_task_id as cutTaskId, video_name as videoName, display, thumbnail, has_audio as hasAudio, video_time as videoTime,
-        start_time as startTime, end_time as endTime
+        start_time as startTime, end_time as endTime, origin_name as originName
     FROM video_track
     WHERE
         cut_task_id = $1
@@ -42,7 +42,8 @@ export const DELETE_AUDIO_TRACK = 'DELETE FROM audio_track WHERE cut_task_id = $
 
 export const SELECT_AUDIO_TRACK = `
     SELECT
-        id, cut_task_id as cutTaskId, audio_name as audioName, display, audio_time as audioTime, start_time as startTime
+        id, cut_task_id as cutTaskId, audio_name as audioName, display, audio_time as audioTime,
+        start_time as startTime, origin_name as originName
     FROM audio_track
     WHERE
         cut_task_id = $1

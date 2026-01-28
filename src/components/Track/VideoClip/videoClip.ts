@@ -3,6 +3,7 @@ import {ONE_SECOND_LENGTH, TIME_STEP, TRACK_GAP, TRACK_SPLIT, UNIT_LENGTH} from 
 import {convertFileSrc, invoke} from "@tauri-apps/api/core";
 import {useCutTaskStore} from "../../../store/cutTaskStore.ts";
 import {renderTrackContextmenu} from "./trackMenu.ts";
+import {useAudioPlayStore} from "../../../store/audioPlayStore.ts";
 
 export const useVideoClip = (clip: any,
                              clipCanvasRef: Ref<HTMLCanvasElement | undefined>, emit: any) => {
@@ -19,6 +20,7 @@ export const useVideoClip = (clip: any,
     let clipCanvasCtx: CanvasRenderingContext2D | null = null;
     const renderQueue = [] as any[];
     const videoEl = document.createElement('video');
+    const audioPlayStore = useAudioPlayStore();
 
     onMounted(async () => {
         const rootPath = await invoke('get_root_path');
@@ -96,6 +98,9 @@ export const useVideoClip = (clip: any,
         e.stopPropagation();
         clip.select = true;
         emit('selectTrack', { id: clip.id });
+
+        // 取消音频轨的选中
+        audioPlayStore.audioTracks.forEach(track => track.select = false);
     };
 
     /**

@@ -17,10 +17,11 @@ export interface VideoTrackInfo {
     id?: number,
     cutTaskId: number,
     videoName: string,
-    display: 0,
+    display: number,
     thumbnail: string,
     hasAudio?: number,
     videoTime: number, // 单位秒
+    originName: string,
     startTime: number,
     endTime: number,
     thumbnailList?: Array<{ url: string, width: number }>,
@@ -34,11 +35,14 @@ export interface AudioTrackInfo {
     id?: number,
     cutTaskId: number,
     audioName: string,
+    originName: string,
     audioTime: number,
     startTime: number,
     display: number,
     left?: number,
     width?: number,
+    src?: string,
+    select?: boolean,
 }
 
 export interface VideoFrameInfo {

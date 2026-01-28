@@ -150,9 +150,9 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             // 开始渲染循环
             this.renderVideoFrame();
         },
-        calcProgress() {
+        calcProgress(currentTime?: number) {
             // 当前时间
-            this.videoCurrentTime = this.getCurrentTime();
+            this.videoCurrentTime = currentTime ?? this.getCurrentTime();
 
             // 计算进度条位置
             this.progressRate = this.videoCurrentTime / this.videoTotalTime;
@@ -196,6 +196,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.preloadNextVideo();
         },
         movePointVideo(second: number) {
+            this.calcProgress(second);
             let currentTime = second;
             for (let i = 0; i < this.videoTracks!.length; i++) {
                 const track = this.videoTracks[i];
@@ -215,7 +216,6 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             // 渲染当前帧
             const renderFrame = () => {
                 this.renderSingleFrame();
-                this.calcProgress();
 
                 // 监听一次即可
                 this.currentVideo!.videoEl!.removeEventListener('timeupdate', renderFrame);

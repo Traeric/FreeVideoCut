@@ -2,6 +2,8 @@
 import {onMounted, onUnmounted, ref} from "vue";
 import {useTrack, useWheel} from './track.ts';
 import VideoClip from "./VideoClip/VideoClip.vue";
+import AudioClip from "./AudioClip/AudioClip.vue";
+import {useAudioPlayStore} from "../../store/audioPlayStore.ts";
 
 const rightPanelEl = ref<HTMLDivElement>();
 const frameLineRef = ref<HTMLDivElement>();
@@ -9,7 +11,6 @@ const videoClipRefs = ref([]);
 const {
   cutVideo,
   removeSelectFrame,
-  cutTaskStore,
   videoPlayStore,
   moveFramePoint,
   timeUtilCount,
@@ -22,7 +23,7 @@ const {
 } = useTrack(rightPanelEl, frameLineRef, videoClipRefs);
 
 const { rightMouseWheel } = useWheel(rightPanelEl);
-
+const audioPlayStore = useAudioPlayStore();
 onMounted(() => {
   document.addEventListener("click", removeSelectFrame);
   rightPanelEl.value!.addEventListener('scroll', panelScrollEvent);
@@ -95,7 +96,10 @@ onUnmounted(() => {
           </template>
         </div>
         <div class="cut-track audio-track" :style="{width: `${trackTotalWith}px`}">
-          <div class="track-item" v-for="audio of cutTaskStore.audioTracks" :style="{left: `${audio.left}px`, width: `${audio.width}px`}"></div>
+          <template v-for="audio of audioPlayStore.audioTracks">
+            <AudioClip :audio="audio">
+            </AudioClip>
+          </template>
         </div>
       </div>
     </div>

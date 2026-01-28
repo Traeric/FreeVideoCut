@@ -11,11 +11,13 @@ import {
 import {Message, Notification} from "@arco-design/web-vue";
 import {VideoTrackInfo} from "../../types/cutTask.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
+import {useAudioPlayStore} from "../../store/audioPlayStore.ts";
 
 export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
                          frameLineRef: Ref<HTMLDivElement | undefined>, videoClipRefs: any) => {
     const cutTaskStore = useCutTaskStore();
     const videoPlayStore = useVideoPlayStore();
+    const audioPlayStore = useAudioPlayStore();
 
     // 计算需要多少个单元 5s一个单元
     const timeUtilCount = computed(() => {
@@ -69,7 +71,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
         let left = e.clientX - progressLineRect!.x + rightPanelEl.value!.scrollLeft;
         // 限制位置
         left = Math.max(0, left);
-        left = Math.min(left, trackTotalWith.value);
+        left = Math.min(left, videoPlayStore.videoTotalTime * ONE_SECOND_LENGTH);
 
         videoPlayStore.movePointVideo((left / UNIT_LENGTH) * TIME_STEP);
         if (videoPlayStore.isPlaying) {
@@ -121,6 +123,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
             endTime: cutVideoTrack.startTime + seconds,
             videoTime: seconds,
             display: 0,
+            originName: cutVideoTrack.originName,
             hasAudio: cutVideoTrack.hasAudio,
         };
         const partTwoVideo: VideoTrackInfo = {
@@ -131,6 +134,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
             endTime: cutVideoTrack.endTime,
             videoTime: cutVideoTrack.endTime - (cutVideoTrack.startTime + seconds),
             display: 0,
+            originName: cutVideoTrack.originName,
             hasAudio: cutVideoTrack.hasAudio,
         };
         const newVideoTracks = [];
@@ -171,6 +175,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
         }
 
         videoPlayStore.videoTracks.forEach(track => track.select = false);
+        audioPlayStore.audioTracks.forEach(track => track.select = false);
     };
 
     function panelScrollEvent ()  {
