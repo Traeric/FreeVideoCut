@@ -1,21 +1,5 @@
-/**
- * 获取uuid
- */
-export function getUUid() {
-    const uuidV4 = crypto.randomUUID();
-    return (uuidV4 as any).replaceAll("-", "");
-}
-
-export function formatTime(seconds: number): string {
-    // 处理 NaN/负数（视频未加载时）
-    if (isNaN(seconds) || seconds < 0) return "00:00:00";
-    // 计算小时、分钟、秒
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    // 补零：确保每部分都是两位数
-    return [h, m, s].map(num => num.toString().padStart(2, '0')).join(':');
-}
+import {convertFileSrc, invoke} from "@tauri-apps/api/core";
+import {useCutTaskStore} from "../store/cutTaskStore.ts";
 
 export const TIME_STEP = 5;
 
@@ -60,3 +44,34 @@ export enum VideoFormatEnum {
 }
 
 export const VIDEO_SUFFIX_NAME = ['mp4', 'mov'];
+
+/**
+ * 获取uuid
+ */
+export function getUUid() {
+    const uuidV4 = crypto.randomUUID();
+    return (uuidV4 as any).replaceAll("-", "");
+}
+
+export function formatTime(seconds: number): string {
+    // 处理 NaN/负数（视频未加载时）
+    if (isNaN(seconds) || seconds < 0) return "00:00:00";
+    // 计算小时、分钟、秒
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    // 补零：确保每部分都是两位数
+    return [h, m, s].map(num => num.toString().padStart(2, '0')).join(':');
+}
+
+
+/**
+ * 获取源信息路径
+ *
+ * @param originName 名称
+ */
+export async function getSrc(originName: string) {
+    const { currentCutTask } = useCutTaskStore();
+    const rootPath = await invoke('get_root_path');
+    return `${convertFileSrc(`${rootPath}/${currentCutTask!.folderName}/videoTrack/${originName}`)}`;
+}

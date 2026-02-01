@@ -12,6 +12,7 @@ import {
 } from "../utils/db.ts";
 import Database from "@tauri-apps/plugin-sql";
 import {useCutTaskStore} from "./cutTaskStore.ts";
+import {useAudioPlayStore} from "./audioPlayStore.ts";
 
 export const useVideoPlayStore = defineStore('videoPlay', {
     state: () => {
@@ -27,6 +28,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             animationId: -1,
             videoTotalTime: 0,  // 视频总时长
             videoCurrentTime: 0, // 当前视频时长
+            currentTimeSnapshot: 0, // 当前时间快照，用于作为参照，在播放中计算当前时间走了多久
             progressRate: 0,
             progressDotLeft: 0,
             lastStatisticsProgressTime: Date.now(),
@@ -78,19 +80,6 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             }
             return totalTime;
         },
-        getCurrentTime() {
-            let currentTime = 0;
-            // 计算前面视频的时间
-            for (let i = 0; i < this.currentVideoIndex; i++) {
-                const curTrack = this.videoTracks[i];
-                currentTime += curTrack.endTime - curTrack.startTime;
-            }
-
-            // 计算当前视频已播放时间
-            const currentVideoTime = this.currentVideo?.videoEl!.currentTime ?? 0;
-            currentTime += currentVideoTime > this.currentVideo!.startTime ? currentVideoTime - this.currentVideo!.startTime : 0;
-            return currentTime;
-        },
         preloadNextVideo() {
             // 预加载下下个视频
             if (this.currentVideoIndex + 1 < this.videoTracks.length) {
@@ -108,6 +97,12 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                 return;
             }
 
+            // 当前时间
+            const curTime = Date.now();
+            this.videoCurrentTime += (curTime - this.currentTimeSnapshot) / 1000;
+            this.videoCurrentTime = Math.min(this.videoTotalTime, this.videoCurrentTime);
+            this.currentTimeSnapshot = curTime
+
             // 计算视频进度相关 10ms一次
             if (Date.now() - this.lastStatisticsProgressTime > 10) {
                 this.lastStatisticsProgressTime = Date.now();
@@ -116,6 +111,9 @@ export const useVideoPlayStore = defineStore('videoPlay', {
 
             // 渲染视频画面
             this.renderSingleFrame();
+            // 播放音频
+            useAudioPlayStore().playAudio(this.videoCurrentTime);
+
             // 判断是否需要进入到下一个视频 可能存在剪切的视频，需要提前从剪切的地方结束
             const currentVideoTime = this.currentVideo.videoEl!.currentTime;
             if (currentVideoTime >= this.currentVideo.endTime || currentVideoTime >= this.currentVideo.videoEl!.duration) {
@@ -137,6 +135,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             }
 
             this.isPlaying = true;
+            this.currentTimeSnapshot = Date.now();
             this.currentVideo!.videoEl!.play().catch(err => {
                 Message.error(`播放失败: ${err}`);
                 this.isPlaying = false;
@@ -150,10 +149,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             // 开始渲染循环
             this.renderVideoFrame();
         },
-        calcProgress(currentTime?: number) {
-            // 当前时间
-            this.videoCurrentTime = currentTime ?? this.getCurrentTime();
-
+        calcProgress() {
             // 计算进度条位置
             this.progressRate = this.videoCurrentTime / this.videoTotalTime;
             this.progressDotLeft = this.progressLineRect!.width * this.progressRate;
@@ -168,6 +164,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
 
             this.isPlaying = false;
             this.currentVideo.videoEl!.pause();
+            useAudioPlayStore().stopAudio();
 
             // 取消动画帧请求
             if (this.animationId) {
@@ -196,7 +193,10 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.preloadNextVideo();
         },
         movePointVideo(second: number) {
-            this.calcProgress(second);
+            // 当前时间
+            this.videoCurrentTime = second;
+            this.currentTimeSnapshot = Date.now();
+            this.calcProgress();
             let currentTime = second;
             for (let i = 0; i < this.videoTracks!.length; i++) {
                 const track = this.videoTracks[i];
@@ -249,18 +249,19 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             let prevTrack: VideoTrackInfo | null = null;
             this.videoTracks.forEach(track => {
                 track.width = track.videoTime * (UNIT_LENGTH / TIME_STEP);
-                // @ts-ignore
-                track.left = (prevTrack !== null && prevTrack !== undefined) ? (prevTrack.left + prevTrack.width) : 0;
-                prevTrack = track;
+                track.left = (prevTrack !== null && prevTrack !== undefined) ? (prevTrack.left! + prevTrack.width!) : 0;
 
                 track.videoTime = Number(track.videoTime);
                 track.startTime = Number(track.startTime);
                 track.endTime = Number(track.endTime);
+                track.trackStartTime = prevTrack ? (prevTrack.trackStartTime! + prevTrack.videoTime) : 0;
+                prevTrack = track;
             });
 
             // 给每个视频绑定video标签
-            const videoPlayStore = useVideoPlayStore();
-            await videoPlayStore.initVideoTracks();
+            await useVideoPlayStore().initVideoTracks();
+            // 初始化音频
+            await useAudioPlayStore().initAudioPlay();
         },
         async updateVideoTracks(newVideoTracks: VideoTrackInfo[], selectIndex: number = -1) {
             const { currentCutTask } = useCutTaskStore();

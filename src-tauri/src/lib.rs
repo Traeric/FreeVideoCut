@@ -49,6 +49,7 @@ pub fn run() {
                 audio_time TEXT NOT NULL,
                 start_time TEXT NOT NULL,
                 end_time TEXT NOT NULL,
+                track_start_time TEXT NOT NULL,
                 display INTEGER NOT NULL
             );
         "#,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted, ref, watch} from "vue";
+import {onMounted, onUnmounted, ref, watch} from "vue";
 import {formatTime} from "../../utils/comonUtils.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 import Export from "../Export/Export.vue";
@@ -69,8 +69,25 @@ const exportVideo = async () => {
   exportModelVisible.value = true;
 };
 
+const spaceKeyPlay = (e: KeyboardEvent) => {
+  if (e.code !== 'Space') {
+    return;
+  }
+
+  if (videoPlayStore.isPlaying) {
+    videoPlayStore.pauseCurrentVideo();
+  } else {
+    videoPlayStore.playCurrentVideo();
+  }
+};
+
 onMounted(() => {
   videoPlayStore.init(playCanvasEl.value!, progressLineEl.value!);
+  document.addEventListener('keyup', spaceKeyPlay);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keyup', spaceKeyPlay);
 });
 </script>
 
