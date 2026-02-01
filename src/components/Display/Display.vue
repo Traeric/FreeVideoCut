@@ -3,6 +3,7 @@ import {onMounted, onUnmounted, ref, watch} from "vue";
 import {formatTime} from "../../utils/comonUtils.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 import Export from "../Export/Export.vue";
+import {useAudioPlayStore} from "../../store/audioPlayStore.ts";
 
 const videoPlayStore = useVideoPlayStore();
 const progressLineEl = ref<HTMLDivElement>();
@@ -12,12 +13,11 @@ const mute = ref(false);
 const videoVolume = ref(50);
 
 watch(videoVolume, (newVal, _) => {
-  // displayVideoEl.value!.volume = newVal / 100;
+  useAudioPlayStore().setVolume(newVal / 100);
   mute.value = newVal === 0;
 });
 
 const playVideo = () => {
-  // displayVideoEl.value!.volume = videoVolume.value / 100;
   videoPlayStore.playCurrentVideo();
 };
 const pauseVideo = () => {
@@ -51,18 +51,30 @@ const dragVideoDown = (e: MouseEvent) => {
 };
 
 const gotoPosition = (e: MouseEvent) => {
+  e.preventDefault();
+  const videoIsPlayed = videoPlayStore.isPlaying;
+  if (videoIsPlayed) {
+    // 先暂停视频
+    videoPlayStore.pauseCurrentVideo();
+  }
+
   const clientX = e.clientX;
   const progressRect = progressLineEl.value!.getBoundingClientRect();
   const left = clientX - progressRect!.x;
   videoPlayStore.movePointVideo(videoPlayStore.videoTotalTime * left / progressRect!.width);
-  if (videoPlayStore.isPlaying) {
+  // 恢复播放
+  if (videoIsPlayed) {
     videoPlayStore.playCurrentVideo();
   }
 };
 
 const muteVideo = (isMute: boolean) => {
   mute.value = isMute;
-  // displayVideoEl.value!.muted = isMute;
+  if (isMute) {
+    useAudioPlayStore().mute();
+  } else {
+    useAudioPlayStore().setVolume(videoVolume.value / 100);
+  }
 };
 
 const exportVideo = async () => {

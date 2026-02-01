@@ -1,6 +1,6 @@
 import {defineStore} from "pinia";
 import {AudioPlayInfo, AudioTrackInfo} from "../types/cutTask.ts";
-import {DELETE_AUDIO_TRACK, executeDb, INSERT_AUDIO_TRACK, SELECT_AUDIO_TRACK} from "../utils/db.ts";
+import {executeDb, INSERT_AUDIO_TRACK, SELECT_AUDIO_TRACK} from "../utils/db.ts";
 import Database from "@tauri-apps/plugin-sql";
 import {useCutTaskStore} from "./cutTaskStore.ts";
 import {getSrc, getUUid, ONE_SECOND_LENGTH} from "../utils/comonUtils.ts";
@@ -52,7 +52,7 @@ export const useAudioPlayStore = defineStore('audioPlay', {
             return audioPlay;
         },
         async preloadAllFragments() {
-            // TODO 以后要考虑大视频的情况
+            // TODO 转到Rust后台获取 以后要考虑大视频的情况
             // 预加载音频：转AudioBuffer
             for (const frag of this.audioPlayList) {
                 const response = await fetch(frag.src!);
@@ -93,25 +93,27 @@ export const useAudioPlayStore = defineStore('audioPlay', {
             // 初始化播放列表
             await this.initAudioPlay();
         },
-        async updateAudioTracks(newAudioTracks: AudioTrackInfo[]) {
+        async addAudioTrack(addAudioTrack: AudioTrackInfo) {
             const { currentCutTask } = useCutTaskStore();
             await executeDb(async (db: Database) => {
-                // 先清除所有音频
-                await db.execute(DELETE_AUDIO_TRACK, [currentCutTask!.id]);
-
                 // 插入新的视频轨道
-                let display = 0;
-                for (const audioTrack of newAudioTracks) {
-                    await db.execute(INSERT_AUDIO_TRACK, [
-                        currentCutTask!.id,
-                        audioTrack.audioName,
-                        audioTrack.audioTime,
-                        audioTrack.startTime,
-                        display++,
-                    ]);
-                }
+                await db.execute(INSERT_AUDIO_TRACK, [
+                    currentCutTask!.id,
+                    addAudioTrack.audioName,
+                    addAudioTrack.originName,
+                    addAudioTrack.audioTime,
+                    addAudioTrack.startTime,
+                    addAudioTrack.endTime,
+                    addAudioTrack.trackStartTime,
+                    addAudioTrack.display,
+                ]);
 
-                // await this.refreshAudioTracks();
+                // 计算轨道宽度
+                addAudioTrack.width = addAudioTrack.audioTime * ONE_SECOND_LENGTH;
+                // 计算src
+                addAudioTrack.src = await getSrc(addAudioTrack.audioName);
+                addAudioTrack.select = false;
+                this.audioTracks.push(addAudioTrack);
             });
         },
         playAudio(playTime: number) {
@@ -162,6 +164,12 @@ export const useAudioPlayStore = defineStore('audioPlay', {
                 source.node.disconnect();
             });
             this.activeAudioSources = [];
+        },
+        mute() {
+            this.setVolume(0);
+        },
+        setVolume(volume: number) {
+            this.gainNode!.gain.setValueAtTime(volume, this.audioContext.currentTime);
         },
         getActiveFragments(playTime: number) {
             return this.audioPlayList.filter(frag => {

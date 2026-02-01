@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import {save} from "@tauri-apps/plugin-dialog";
 import {reactive} from "vue";
-import {DEFAULT_EXPORT_VIDEO_NAME, VIDEO_SUFFIX_NAME, VideoFormatEnum} from "../../utils/comonUtils.ts";
+import {DEFAULT_EXPORT_VIDEO_NAME, formatTime, VIDEO_SUFFIX_NAME, VideoFormatEnum} from "../../utils/comonUtils.ts";
+import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 
 const props = defineProps<{
   visible: boolean
@@ -16,6 +17,7 @@ const videoFrom = reactive({
   exportPath: '',
   videoFormat: VideoFormatEnum.MP4,
 });
+const videoPlayStore = useVideoPlayStore();
 
 const close = () => {
   emit('update:visible', false);
@@ -87,7 +89,7 @@ const exportVideo = async () => {
             <template #icon>
               <icon-video-camera />
             </template>
-            00:18:13
+            {{formatTime(videoPlayStore.videoTotalTime)}}
           </a-tag>
         </a-form-item>
       </a-form>

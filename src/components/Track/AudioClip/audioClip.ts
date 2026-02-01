@@ -3,6 +3,7 @@ import {onMounted, Ref} from "vue";
 import WaveSurfer from 'wavesurfer.js';
 import {useVideoPlayStore} from "../../../store/videoPlayStore.ts";
 import {renderTrackContextmenu} from "./trackMenu.ts";
+import {useAudioPlayStore} from "../../../store/audioPlayStore.ts";
 
 export const useAudioTrack = (audio: AudioTrackInfo, waveContainerEl: Ref<HTMLDivElement | undefined>) => {
     const videoPlayStore = useVideoPlayStore();
@@ -28,6 +29,8 @@ export const useAudioTrack = (audio: AudioTrackInfo, waveContainerEl: Ref<HTMLDi
     });
 
     const selectAudioTrack = () => {
+        // 取消其他音频选中
+        useAudioPlayStore().audioTracks.forEach(track => track.select = false);
         audio.select = true;
 
         // 取消视频轨道选中

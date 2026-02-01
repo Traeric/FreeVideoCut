@@ -37,27 +37,31 @@ export const useVideoClip = (clip: any,
         clipWidth.value = clip.videoTime / TIME_STEP * UNIT_LENGTH - TRACK_SPLIT;
 
         videoEl.addEventListener('loadedmetadata', () => {
-            // 计算视频长宽比
-            const radio = videoEl.videoWidth / videoEl.videoHeight;
-            // 计算视频轨道固定高度 是否多了音轨
-            videoInfo.height = clip.hasAudio ? 70 : 90;
-            // 视频宽度
-            videoInfo.width = Math.ceil(videoInfo.height * radio);
-            // 按照宽度计算当前轨道应该展示多少张图片 （视频区域：轨道宽度 - padding宽度）
-            videoInfo.videoThumbnailCount = Math.ceil((clipWidth.value - 2 * trackGap.value) / videoInfo.width);
-            // 计算间隔的秒数
-            videoInfo.timeGap = videoInfo.width / ONE_SECOND_LENGTH;
-
-            // 设置canvas的高度
-            clipCanvasRef.value!.width = clipWidth.value - 2 * trackGap.value;
-            clipCanvasRef.value!.height = videoInfo.height;
-
-            // 渲染当前轨道
-            emit('renderSingleTrack', { id: clip.id });
+            loadVideoTrack();
         });
 
         videoEl.addEventListener('timeupdate', renderVideoFrame);
     });
+
+    function loadVideoTrack() {
+        // 计算视频长宽比
+        const radio = videoEl.videoWidth / videoEl.videoHeight;
+        // 计算视频轨道固定高度 是否多了音轨
+        videoInfo.height = clip.hasAudio ? 70 : 90;
+        // 视频宽度
+        videoInfo.width = Math.ceil(videoInfo.height * radio);
+        // 按照宽度计算当前轨道应该展示多少张图片 （视频区域：轨道宽度 - padding宽度）
+        videoInfo.videoThumbnailCount = Math.ceil((clipWidth.value - 2 * trackGap.value) / videoInfo.width);
+        // 计算间隔的秒数
+        videoInfo.timeGap = videoInfo.width / ONE_SECOND_LENGTH;
+
+        // 设置canvas的高度
+        clipCanvasRef.value!.width = clipWidth.value - 2 * trackGap.value;
+        clipCanvasRef.value!.height = videoInfo.height;
+
+        // 渲染当前轨道
+        emit('renderSingleTrack', { id: clip.id });
+    }
 
     const renderVideoTrack = (start: number, end: number) => {
         // 计算起始显示第几张图片
@@ -114,7 +118,7 @@ export const useVideoClip = (clip: any,
             return;
         }
 
-        renderTrackContextmenu(e, clip);
+        renderTrackContextmenu(e, clip, loadVideoTrack);
     };
 
     return {

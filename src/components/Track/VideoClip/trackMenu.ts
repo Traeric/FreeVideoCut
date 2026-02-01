@@ -6,6 +6,7 @@ import ContextMenu from "@imengyu/vue3-context-menu";
 import {h} from "vue";
 import {useCutTaskStore} from "../../../store/cutTaskStore.ts";
 import {useVideoPlayStore} from "../../../store/videoPlayStore.ts";
+import {useAudioPlayStore} from "../../../store/audioPlayStore.ts";
 
 /**
  * 删除视频轨道
@@ -33,34 +34,29 @@ export async function deleteVideoTrack(clip: VideoTrackInfo) {
 
 /**
  * 分离音频
- *
- * @param cutTaskStore 剪辑信息
  */
-export async function splitVideoAudio(cutTaskStore: any) {
-    const audioName = await invoke('split_video_audio', {
-        workspace: cutTaskStore.currentCutTask.folderName,
-        trackName: cutTaskStore.selectFrameData.track.videoName,
-        pureTrackName: cutTaskStore.selectFrameData.track.thumbnail,
-    }) as string;
-
+export async function splitVideoAudio(clip: VideoTrackInfo) {
+    const cutTaskStore = useCutTaskStore();
     // 更新视频轨道的音频信息
-    const selectTrack = cutTaskStore.selectFrameData.track;
     await executeDb(async (db: Database) => {
-        await db.execute(UPDATE_VIDEO_HAS_AUDIO, [selectTrack.id]);
-        selectTrack.hasAudio = 0;
+        await db.execute(UPDATE_VIDEO_HAS_AUDIO, [clip.id]);
+        clip.hasAudio = 0;
     });
 
     // 音频入库
-    const audioTracks = cutTaskStore.audioTracks as AudioTrackInfo[];
+    const audioTracks = useAudioPlayStore().audioTracks as AudioTrackInfo[];
     const lastTrack = audioTracks[audioTracks.length - 1];
-    audioTracks.push({
-        cutTaskId: cutTaskStore.currentCutTask.id,
-        audioName,
-        audioTime: cutTaskStore.selectFrameData.track.videoTime,
-        startTime: lastTrack ? (lastTrack.startTime + lastTrack.audioTime) : 0,
-        display: 0,
-    });
-    cutTaskStore.updateAudioTracks(audioTracks);
+    const audioTrack = {
+        cutTaskId: cutTaskStore.currentCutTask!.id,
+        audioName: clip.videoName,
+        originName: clip.originName,
+        audioTime: clip.videoTime,
+        startTime: 0,
+        endTime: clip.endTime,
+        trackStartTime: lastTrack ? (lastTrack.trackStartTime + lastTrack.audioTime) : 0,
+        display: lastTrack ? lastTrack.display + 1 : 0,
+    };
+    useAudioPlayStore().addAudioTrack(audioTrack);
 }
 
 /**
@@ -68,8 +64,9 @@ export async function splitVideoAudio(cutTaskStore: any) {
  *
  * @param e 鼠标事件
  * @param clip 当前视频轨道信息
+ * @param loadVideoTrack 重新加载视频轨道
  */
-export function renderTrackContextmenu(e: MouseEvent, clip: VideoTrackInfo) {
+export function renderTrackContextmenu(e: MouseEvent, clip: VideoTrackInfo, loadVideoTrack: () => void) {
     return ContextMenu.showContextMenu({
         x: e.x,
         y: e.y,
@@ -97,9 +94,11 @@ export function renderTrackContextmenu(e: MouseEvent, clip: VideoTrackInfo) {
                         height: '20px',
                     }
                 }),
-                // disabled: !cutTaskStore.selectFrameData.track.hasAudio,
+                disabled: !clip.hasAudio,
                 onClick: () => {
-                    // splitVideoAudio(cutTaskStore);
+                    splitVideoAudio(clip).then(() => {
+                        loadVideoTrack();
+                    });
                 },
             }
         ]

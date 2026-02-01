@@ -67,6 +67,12 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
 
     const gotoClickTime = (e: MouseEvent) => {
         e.preventDefault();
+        // 暂停视频
+        const videoIsPlayed = videoPlayStore.isPlaying;
+        if (videoIsPlayed) {
+            videoPlayStore.pauseCurrentVideo();
+        }
+
         const progressLineRect = rightPanelEl.value?.getBoundingClientRect();
         let left = e.clientX - progressLineRect!.x + rightPanelEl.value!.scrollLeft;
         // 限制位置
@@ -74,7 +80,8 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
         left = Math.min(left, videoPlayStore.videoTotalTime * ONE_SECOND_LENGTH);
 
         videoPlayStore.movePointVideo((left / UNIT_LENGTH) * TIME_STEP);
-        if (videoPlayStore.isPlaying) {
+        // 恢复播放
+        if (videoIsPlayed) {
             videoPlayStore.playCurrentVideo();
         }
     };

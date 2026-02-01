@@ -39,6 +39,7 @@ const {
   align-items center
   position relative
   user-select none
+  padding-right 2px
   .select-border
     border 2px solid #fff
     position absolute

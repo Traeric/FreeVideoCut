@@ -36,7 +36,10 @@ export const DELETE_VIDEO_TRACK = 'DELETE FROM video_track WHERE cut_task_id = $
 
 export const UPDATE_VIDEO_HAS_AUDIO = 'UPDATE video_track SET has_audio = 0 WHERE id = $1';
 
-export const INSERT_AUDIO_TRACK = 'INSERT INTO audio_track (cut_task_id, audio_name, audio_time, start_time, display) VALUES ($1, $2, $3, $4, $5)';
+export const INSERT_AUDIO_TRACK = `
+    INSERT INTO audio_track (cut_task_id, audio_name, origin_name, audio_time, start_time, end_time, track_start_time, display)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`;
 
 export const DELETE_AUDIO_TRACK = 'DELETE FROM audio_track WHERE cut_task_id = $1';
 
