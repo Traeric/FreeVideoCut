@@ -55,7 +55,7 @@ export async function splitVideoAudio(clip: VideoTrackInfo) {
         endTime: clip.endTime,
         trackStartTime: lastTrack ? (lastTrack.trackStartTime + lastTrack.audioTime) : 0,
         display: lastTrack ? lastTrack.display + 1 : 0,
-    };
+    } as AudioTrackInfo;
     useAudioPlayStore().addAudioTrack(audioTrack);
 }
 

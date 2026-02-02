@@ -282,6 +282,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                             track.endTime,
                             display++,
                             track.hasAudio,
+                            track.originName,
                         ]);
                     } else {
                         await db.execute(INSERT_VIDEO_TRACK, [
@@ -293,6 +294,7 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                             track.endTime,
                             display++,
                             track.hasAudio,
+                            track.originName,
                         ]);
                     }
                 }

@@ -43,6 +43,7 @@ const dragVideoDown = (e: MouseEvent) => {
 
   document.onmouseup = () => {
     document.onmousemove = null;
+    document.onmouseup = null;
     // 恢复播放
     if (videoIsPlayed) {
       videoPlayStore.playCurrentVideo();

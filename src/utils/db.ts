@@ -14,13 +14,13 @@ export const SELECT_IMPORT_VIDEO = `
 `;
 
 export const INSERT_VIDEO_TRACK = `
-    INSERT INTO video_track (cut_task_id, video_name, thumbnail, video_time, start_time, end_time, display, has_audio)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO video_track (cut_task_id, video_name, thumbnail, video_time, start_time, end_time, display, has_audio, origin_name)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `;
 
 export const INSERT_VIDEO_TRACK_WITH_ID = `
-    INSERT INTO video_track (id, cut_task_id, video_name, thumbnail, video_time, start_time, end_time, display, has_audio)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    INSERT INTO video_track (id, cut_task_id, video_name, thumbnail, video_time, start_time, end_time, display, has_audio, origin_name)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `;
 
 export const SELECT_VIDEO_TRACK = `
@@ -46,7 +46,7 @@ export const DELETE_AUDIO_TRACK = 'DELETE FROM audio_track WHERE cut_task_id = $
 export const SELECT_AUDIO_TRACK = `
     SELECT
         id, cut_task_id as cutTaskId, audio_name as audioName, display, audio_time as audioTime,
-        start_time as startTime, origin_name as originName
+        start_time as startTime, origin_name as originName, end_time as endTime, track_start_time as trackStartTime
     FROM audio_track
     WHERE
         cut_task_id = $1

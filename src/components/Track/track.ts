@@ -9,12 +9,12 @@ import {
     UNIT_LENGTH
 } from "../../utils/comonUtils.ts";
 import {Message, Notification} from "@arco-design/web-vue";
-import {VideoTrackInfo} from "../../types/cutTask.ts";
+import {AudioTrackInfo, VideoTrackInfo} from "../../types/cutTask.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 import {useAudioPlayStore} from "../../store/audioPlayStore.ts";
 
 export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
-                         frameLineRef: Ref<HTMLDivElement | undefined>, videoClipRefs: any) => {
+                         frameLineRef: Ref<HTMLDivElement | undefined>, videoClipRefs: any, audioClipRefs: any) => {
     const cutTaskStore = useCutTaskStore();
     const videoPlayStore = useVideoPlayStore();
     const audioPlayStore = useAudioPlayStore();
@@ -58,6 +58,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
 
         document.onmouseup = () => {
             document.onmousemove = null;
+            document.onmouseup = null;
             // 恢复播放
             if (videoIsPlayed) {
                 videoPlayStore.playCurrentVideo();
@@ -226,6 +227,32 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
         }
     };
 
+    const audioMoveDown = (e: MouseEvent, audio: AudioTrackInfo) => {
+        const startX = e.clientX;
+        const startLeft = audio.left!;
+
+        // 获取当前轨道移动的前后限制
+        const [startLimit, endLimit] = useAudioPlayStore().getTrackMoveLimit(audio);
+        document.onmousemove = (moveE: MouseEvent) => {
+            // 拖动前先选中轨道
+            audioClipRefs.value.find((item: any) => item.$props.audio.id === audio.id)?.selectAudioTrack();
+
+            const moveDistance = moveE.clientX - startX;
+            let currentLeft = startLeft + moveDistance;
+            currentLeft = Math.min(endLimit, Math.max(startLimit, currentLeft));
+            audio.left = currentLeft;
+            audio.trackStartTime = currentLeft / ONE_SECOND_LENGTH;
+            audio.trackEndTime = (currentLeft + audio.audioTime) / ONE_SECOND_LENGTH;
+        };
+
+        document.onmouseup = () => {
+            document.onmousemove = null;
+            document.onmouseup = null;
+            // TODO 保存数据
+
+        };
+    };
+
     return {
         cutVideo,
         removeSelectFrame,
@@ -239,6 +266,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
         gotoClickTime,
         panelScrollEvent,
         renderSingleTrack,
+        audioMoveDown,
     };
 };
 

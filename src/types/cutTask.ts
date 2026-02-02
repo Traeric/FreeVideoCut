@@ -41,6 +41,7 @@ export interface AudioTrackInfo {
     startTime: number,
     endTime: number,
     trackStartTime: number,
+    trackEndTime: number,
     display: number,
     left?: number,
     width?: number,

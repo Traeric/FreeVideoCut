@@ -8,6 +8,7 @@ import {useAudioPlayStore} from "../../store/audioPlayStore.ts";
 const rightPanelEl = ref<HTMLDivElement>();
 const frameLineRef = ref<HTMLDivElement>();
 const videoClipRefs = ref([]);
+const audioClipRefs = ref([]);
 const {
   cutVideo,
   removeSelectFrame,
@@ -20,7 +21,8 @@ const {
   panelScrollEvent,
   renderSingleTrack,
   selectVideoTrack,
-} = useTrack(rightPanelEl, frameLineRef, videoClipRefs);
+  audioMoveDown,
+} = useTrack(rightPanelEl, frameLineRef, videoClipRefs, audioClipRefs);
 
 const { rightMouseWheel } = useWheel(rightPanelEl);
 const audioPlayStore = useAudioPlayStore();
@@ -49,7 +51,7 @@ onUnmounted(() => {
           <template #icon>
             <icon-upload />
           </template>
-          <template #default>导出</template>
+          <template #default>鼠标控制横向滚动条</template>
         </a-button>
       </div>
       <div class="right-controls">
@@ -97,7 +99,15 @@ onUnmounted(() => {
         </div>
         <div class="cut-track audio-track" :style="{width: `${trackTotalWith}px`}">
           <template v-for="audio of audioPlayStore.audioTracks">
-            <AudioClip :audio="audio">
+            <AudioClip
+                :audio="audio"
+                ref="audioClipRefs"
+                @mousedown="audioMoveDown($event, audio)"
+                class="audio-track-item"
+                :style="{
+                  left: `${audio.left}px`,
+                }"
+            >
             </AudioClip>
           </template>
         </div>

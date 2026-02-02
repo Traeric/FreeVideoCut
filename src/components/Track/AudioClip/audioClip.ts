@@ -24,7 +24,7 @@ export const useAudioTrack = (audio: AudioTrackInfo, waveContainerEl: Ref<HTMLDi
             hideScrollbar: true, // 隐藏滚动条（如果有）
             fillParent: true, // 填满容器，无需滚动
             barAlign: 'bottom',
-            barHeight: 2,
+            barHeight: 1,
         });
     });
 
@@ -41,6 +41,7 @@ export const useAudioTrack = (audio: AudioTrackInfo, waveContainerEl: Ref<HTMLDi
         e.preventDefault();
         renderTrackContextmenu(e, audio);
     };
+
     return {
         selectAudioTrack,
         audioContextMenu,

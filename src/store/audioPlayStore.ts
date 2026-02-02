@@ -21,6 +21,25 @@ export const useAudioPlayStore = defineStore('audioPlay', {
     actions: {
         async initAudioPlay() {
             // 先从视频中获取原生音频
+            this.audioPlayList.push(...await this.fetchFromVideo());
+            // 获取音频轨道
+            this.audioPlayList.push(...await this.fetchFromAudioTrack());
+
+            // 预加载加载音频片段
+            await this.preloadAllFragments();
+            // 初始化Web Audio混音引擎
+            this.initAudioEngine();
+        },
+        async fetchFromAudioTrack() {
+            const audioPlayList = [];
+            for (const track of this.audioTracks) {
+                const audioPlay = await this.createAudioPlayInfo(track.trackStartTime, track.startTime, track.endTime, track.audioTime, track.audioName);
+                audioPlayList.push(audioPlay);
+            }
+            return audioPlayList;
+        },
+        async fetchFromVideo() {
+            const audioPlayList = [];
             const videoPlayStore = useVideoPlayStore();
             let trackStartTime = 0;
             for (const track of videoPlayStore.videoTracks) {
@@ -30,14 +49,10 @@ export const useAudioPlayStore = defineStore('audioPlay', {
                 }
 
                 const audioPlay = await this.createAudioPlayInfo(trackStartTime, track.startTime, track.endTime, track.videoTime, track.videoName);
-                this.audioPlayList.push(audioPlay);
                 trackStartTime += track.videoTime;
+                audioPlayList.push(audioPlay);
             }
-
-            // 预加载加载音频片段
-            await this.preloadAllFragments();
-            // 初始化Web Audio混音引擎
-            this.initAudioEngine();
+            return audioPlayList;
         },
         async createAudioPlayInfo(trackStartTime: number, startTime: number, endTime: number, sourceTime: number, sourceName: string) {
             const audioPlay: AudioPlayInfo = {
@@ -80,9 +95,14 @@ export const useAudioPlayStore = defineStore('audioPlay', {
             await executeDb(async (db: Database) => {
                 // 获取视频轨道
                 this.audioTracks = await db.select(SELECT_AUDIO_TRACK, [currentCutTask!.id]) as AudioTrackInfo[];
-                this.audioTracks.sort((o1, o2) => o1.display - o2.display);
+                this.audioTracks.sort((o1, o2) => o1.trackStartTime - o2.trackStartTime);
                 // 计算轨道位置
                 this.audioTracks.forEach(audio => {
+                    audio.startTime = Number(audio.startTime);
+                    audio.endTime = Number(audio.endTime);
+                    audio.trackStartTime = Number(audio.trackStartTime);
+                    audio.trackEndTime = audio.trackStartTime + audio.audioTime;
+                    audio.left = audio.trackStartTime * ONE_SECOND_LENGTH;
                     audio.width = audio.audioTime * ONE_SECOND_LENGTH;
                     // 计算src
                     audio.src = `${convertFileSrc(`${rootPath}/${currentCutTask!.folderName}/videoTrack/${audio.audioName}`)}?id=${audio.id}`;
@@ -108,6 +128,7 @@ export const useAudioPlayStore = defineStore('audioPlay', {
                     addAudioTrack.display,
                 ]);
 
+                addAudioTrack.left = addAudioTrack.trackStartTime * ONE_SECOND_LENGTH;
                 // 计算轨道宽度
                 addAudioTrack.width = addAudioTrack.audioTime * ONE_SECOND_LENGTH;
                 // 计算src
@@ -175,6 +196,22 @@ export const useAudioPlayStore = defineStore('audioPlay', {
             return this.audioPlayList.filter(frag => {
                 return frag.trackStartTime <= playTime && frag.trackEndTime >= playTime;
             });
+        },
+        getTrackMoveLimit(audio: AudioTrackInfo) {
+            let startLimit = 0;
+            let endLimit = Infinity;
+            const currentTrackIndex = this.audioTracks.findIndex(track => track.id === audio.id);
+            if (currentTrackIndex > 0) {
+                const prevAudio = this.audioTracks[currentTrackIndex - 1];
+                startLimit = prevAudio.trackEndTime * ONE_SECOND_LENGTH;
+            }
+
+            if (currentTrackIndex < this.audioTracks.length - 1) {
+                const nextAudio = this.audioTracks[currentTrackIndex + 1];
+                endLimit = (nextAudio.trackStartTime - audio.audioTime) * ONE_SECOND_LENGTH;
+            }
+
+            return [startLimit, endLimit];
         },
     },
 })
