@@ -22,9 +22,10 @@ const {
   renderSingleTrack,
   selectVideoTrack,
   audioMoveDown,
+  scrollSwitch,
 } = useTrack(rightPanelEl, frameLineRef, videoClipRefs, audioClipRefs);
 
-const { rightMouseWheel } = useWheel(rightPanelEl);
+const { rightMouseWheel } = useWheel(rightPanelEl, scrollSwitch);
 const audioPlayStore = useAudioPlayStore();
 onMounted(() => {
   document.addEventListener("click", removeSelectFrame);
@@ -47,12 +48,16 @@ onUnmounted(() => {
           </a-tooltip>
         </div>
         <div class="split-line"></div>
-        <a-button type="primary" size="small" status="warning">
-          <template #icon>
-            <icon-upload />
-          </template>
-          <template #default>鼠标控制横向滚动条</template>
-        </a-button>
+        <a-tooltip :content="`鼠标滚轮控制${scrollSwitch ? '竖向' : '横向'}滚动条`">
+          <div
+              :class="{
+                'scroll-switch': true,
+                'switch-vertical': scrollSwitch,
+              }"
+              @click="scrollSwitch = !scrollSwitch"
+          >
+          </div>
+        </a-tooltip>
       </div>
       <div class="right-controls">
       </div>

@@ -1,5 +1,5 @@
 import {useCutTaskStore} from "../../store/cutTaskStore.ts";
-import {computed, Ref} from "vue";
+import {computed, ref, Ref} from "vue";
 import {
     CUT_VIDEO_MIN_LENG,
     EXCEPT_CLASS_NAME,
@@ -20,6 +20,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
     const cutTaskStore = useCutTaskStore();
     const videoPlayStore = useVideoPlayStore();
     const audioPlayStore = useAudioPlayStore();
+    const scrollSwitch = ref(false);
 
     // 计算需要多少个单元 5s一个单元
     const timeUtilCount = computed(() => {
@@ -276,6 +277,7 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
         panelScrollEvent,
         renderSingleTrack,
         audioMoveDown,
+        scrollSwitch,
     };
 };
 
@@ -283,9 +285,14 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
  * 滚轮事件
  *
  * @param rightPanelEl 右侧可滚动面板
+ * @param scrollSwitch 是否禁用横向滚动
  */
-export const useWheel = (rightPanelEl: Ref<HTMLDivElement | undefined>) => {
+export const useWheel = (rightPanelEl: Ref<HTMLDivElement | undefined>, scrollSwitch: Ref<boolean>) => {
     const rightMouseWheel = (e: WheelEvent) => {
+        if (scrollSwitch.value) {
+            return;
+        }
+
         e.preventDefault();
         rightPanelEl.value!.scrollLeft += e.deltaY * 1.1;
     };
