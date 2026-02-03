@@ -50,7 +50,12 @@ export interface AudioTrackInfo {
 }
 
 export interface AudioPlayInfo {
-    id: string,
+    id: string;
+
+    /**
+     * 关联的音频轨道id(如有)
+     */
+    audioId: number;
 
     /**
      * 音频在轨道上的起始位置

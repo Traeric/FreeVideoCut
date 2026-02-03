@@ -52,6 +52,12 @@ export const SELECT_AUDIO_TRACK = `
         cut_task_id = $1
 `;
 
+export const UPDATE_AUDIO_TRACK_START_TIME = `
+    UPDATE audio_track SET
+        track_start_time = $1
+   WHERE id = $2
+`;
+
 export async function executeDb(executeCallback: (db: Database) => any) {
     const dbUrl = await invoke('get_db_url') as string;
     const db = await Database.load(dbUrl);

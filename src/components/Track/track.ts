@@ -12,6 +12,8 @@ import {Message, Notification} from "@arco-design/web-vue";
 import {AudioTrackInfo, VideoTrackInfo} from "../../types/cutTask.ts";
 import {useVideoPlayStore} from "../../store/videoPlayStore.ts";
 import {useAudioPlayStore} from "../../store/audioPlayStore.ts";
+import {executeDb, UPDATE_AUDIO_TRACK_START_TIME} from "../../utils/db.ts";
+import Database from "@tauri-apps/plugin-sql";
 
 export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
                          frameLineRef: Ref<HTMLDivElement | undefined>, videoClipRefs: any, audioClipRefs: any) => {
@@ -242,14 +244,21 @@ export const useTrack = (rightPanelEl: Ref<HTMLDivElement | undefined>,
             currentLeft = Math.min(endLimit, Math.max(startLimit, currentLeft));
             audio.left = currentLeft;
             audio.trackStartTime = currentLeft / ONE_SECOND_LENGTH;
-            audio.trackEndTime = (currentLeft + audio.audioTime) / ONE_SECOND_LENGTH;
+            audio.trackEndTime = audio.trackStartTime + audio.audioTime;
         };
 
         document.onmouseup = () => {
             document.onmousemove = null;
             document.onmouseup = null;
-            // TODO 保存数据
-
+            // 更新音频播放数据并保存
+            const playAudio = useAudioPlayStore().audioPlayList.find(item => item.audioId === audio.id);
+            if (playAudio) {
+                playAudio.trackStartTime = audio.trackStartTime;
+                playAudio.trackEndTime = audio.trackEndTime;
+            }
+            executeDb((db: Database) => {
+                db.execute(UPDATE_AUDIO_TRACK_START_TIME, [audio.trackStartTime, audio.id]);
+            });
         };
     };
 

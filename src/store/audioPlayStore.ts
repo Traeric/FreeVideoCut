@@ -33,7 +33,10 @@ export const useAudioPlayStore = defineStore('audioPlay', {
         async fetchFromAudioTrack() {
             const audioPlayList = [];
             for (const track of this.audioTracks) {
-                const audioPlay = await this.createAudioPlayInfo(track.trackStartTime, track.startTime, track.endTime, track.audioTime, track.audioName);
+                const audioPlay = await this.createAudioPlayInfo(
+                    track.trackStartTime, track.startTime, track.endTime, track.audioTime, track.audioName,
+                    track.id
+                );
                 audioPlayList.push(audioPlay);
             }
             return audioPlayList;
@@ -54,9 +57,10 @@ export const useAudioPlayStore = defineStore('audioPlay', {
             }
             return audioPlayList;
         },
-        async createAudioPlayInfo(trackStartTime: number, startTime: number, endTime: number, sourceTime: number, sourceName: string) {
+        async createAudioPlayInfo(trackStartTime: number, startTime: number, endTime: number, sourceTime: number, sourceName: string, id: number = -1) {
             const audioPlay: AudioPlayInfo = {
                 id: getUUid(),
+                audioId: id,
                 trackStartTime: trackStartTime,
                 trackEndTime: trackStartTime + sourceTime,
                 startTime: startTime,
@@ -100,6 +104,7 @@ export const useAudioPlayStore = defineStore('audioPlay', {
                 this.audioTracks.forEach(audio => {
                     audio.startTime = Number(audio.startTime);
                     audio.endTime = Number(audio.endTime);
+                    audio.audioTime = Number(audio.audioTime);
                     audio.trackStartTime = Number(audio.trackStartTime);
                     audio.trackEndTime = audio.trackStartTime + audio.audioTime;
                     audio.left = audio.trackStartTime * ONE_SECOND_LENGTH;
