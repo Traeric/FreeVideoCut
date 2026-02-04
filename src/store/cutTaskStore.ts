@@ -23,6 +23,10 @@ export const useCutTaskStore = defineStore('cutTask', {
     },
     actions: {
         async cutTaskInit() {
+            // 清除正在播放的音频/视频
+            useAudioPlayStore().destroy();
+            useVideoPlayStore().destroy();
+
             // 获取所有的剪辑任务
             await executeDb(async db => {
                 let cutList = await db.select(QUERY_CUT_TASK) as any;
@@ -52,10 +56,10 @@ export const useCutTaskStore = defineStore('cutTask', {
             localStorage.setItem('cutTaskFolder', cutTaskFolder);
             // 查询导入视频
             await this.refreshImportVideos();
-            // 查询视频轨道
-            await useVideoPlayStore().refreshVideoTrack();
             // 初始化音频轨道
             await useAudioPlayStore().initAudioTrack();
+            // 查询视频轨道
+            await useVideoPlayStore().refreshVideoTrack();
         },
         async addCutTask(db: Database): Promise<string> {
             const folderName = getUUid();

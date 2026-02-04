@@ -88,7 +88,7 @@ const switchCutTask = (cutTask: CutTask) => {
       >
         导入视频
       </a-button>
-      <a-popconfirm content="是否要开始新的剪辑任务？" type="success" @ok="newCutTask">
+      <a-popconfirm content="是否要开始新的剪辑任务？" type="warning" @ok="newCutTask" :ok-button-props="{status: 'warning'}">
         <a-button
           type="primary"
           shape="round"

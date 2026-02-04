@@ -47,6 +47,20 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                 this.progressLineRect = progressLineEl.getBoundingClientRect();
             });
         },
+        destroy() {
+            if (this.canvasCtx instanceof CanvasRenderingContext2D) {
+                this.canvasCtx!.clearRect(0, 0, this.playCanvasEl!.width, this.playCanvasEl!.height);
+            }
+
+            this.videoTracks.forEach(item => item.videoEl?.pause());
+            this.videoTracks = [];
+            this.isPlaying = false;
+            cancelAnimationFrame(this.animationId);
+            this.animationId = -1;
+            this.videoCurrentTime = 0;
+            this.videoTotalTime = 0;
+            this.calcProgress();
+        },
         setCanvas(canvasEl: HTMLCanvasElement) {
             this.playCanvasEl = canvasEl;
             this.canvasCtx = canvasEl.getContext('2d');
@@ -74,11 +88,17 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             this.movePointVideo(this.videoTotalTime < this.videoCurrentTime ? this.videoTotalTime : this.videoCurrentTime);
         },
         getTotalTime() {
-            let totalTime = 0;
+            // 视频总时长
+            let videoTotalTime = 0;
             for (const track of this.videoTracks) {
-                totalTime += track.endTime - track.startTime;
+                videoTotalTime += track.endTime - track.startTime;
             }
-            return totalTime;
+
+            // 音频总时长
+            const allAudioTrackEndTime = useAudioPlayStore().audioTracks.map(item => item.trackEndTime);
+            const audioTotalTime = Math.max(...allAudioTrackEndTime);
+            // 取音视频中时长较长的那个
+            return Math.max(videoTotalTime, audioTotalTime);
         },
         preloadNextVideo() {
             // 预加载下下个视频
@@ -92,8 +112,13 @@ export const useVideoPlayStore = defineStore('videoPlay', {
             }
         },
         renderVideoFrame() {
+            if (!this.isPlaying) {
+                return;
+            }
+
             // 渲染视频帧
-            if (!this.isPlaying || !this.currentVideo) {
+            if (this.videoTotalTime <= this.videoCurrentTime) {
+                this.isPlaying = false;
                 return;
             }
 
@@ -109,26 +134,34 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                 this.calcProgress();
             }
 
-            // 渲染视频画面
-            this.renderSingleFrame();
             // 播放音频
             useAudioPlayStore().playAudio(this.videoCurrentTime);
+            // 播放视频
+            this.playVideo();
 
+            // 请求下一帧渲染
+            this.animationId = requestAnimationFrame(this.renderVideoFrame);
+        },
+        playVideo() {
+            if (!this.currentVideo) {
+                return;
+            }
+
+            // 渲染视频画面
+            this.renderSingleFrame();
             // 判断是否需要进入到下一个视频 可能存在剪切的视频，需要提前从剪切的地方结束
             const currentVideoTime = this.currentVideo.videoEl!.currentTime;
             if (currentVideoTime >= this.currentVideo.endTime || currentVideoTime >= this.currentVideo.videoEl!.duration) {
                 this.playNextVideo();
             }
-
-            // 请求下一帧渲染
-            this.animationId = requestAnimationFrame(this.renderVideoFrame);
         },
         playCurrentVideo() {
-            if (!this.videoTracks.length) {
-                return;
+            // 播放到末尾 点击播放则从头开始播放
+            if (this.videoCurrentTime >= this.videoTotalTime) {
+                this.videoCurrentTime = 0;
             }
 
-            if (!this.currentVideo) {
+            if (this.videoTracks.length && !this.currentVideo) {
                 this.currentVideo = this.videoTracks[0];
                 this.currentVideoIndex = 0;
                 this.currentVideo!.videoEl!.currentTime = 0;
@@ -136,14 +169,18 @@ export const useVideoPlayStore = defineStore('videoPlay', {
 
             this.isPlaying = true;
             this.currentTimeSnapshot = Date.now();
-            this.currentVideo!.videoEl!.play().catch(err => {
-                Message.error(`播放失败: ${err}`);
-                this.isPlaying = false;
-            });
-            // 当前视频初始播放
-            if (this.currentVideo.videoEl!.currentTime <= this.currentVideo.startTime) {
-                // 存在切分的视频 需要从指定位置开始播放 前面的内容为切分后的
-                this.currentVideo!.videoEl!.currentTime = this.currentVideo.startTime;
+
+            // 有视频则播放视频
+            if (this.currentVideo) {
+                this.currentVideo!.videoEl!.play().catch(err => {
+                    Message.error(`播放失败: ${err}`);
+                    this.isPlaying = false;
+                });
+                // 当前视频初始播放
+                if (this.currentVideo.videoEl!.currentTime <= this.currentVideo.startTime) {
+                    // 存在切分的视频 需要从指定位置开始播放 前面的内容为切分后的
+                    this.currentVideo!.videoEl!.currentTime = this.currentVideo.startTime;
+                }
             }
 
             // 开始渲染循环
@@ -151,19 +188,15 @@ export const useVideoPlayStore = defineStore('videoPlay', {
         },
         calcProgress() {
             // 计算进度条位置
-            this.progressRate = this.videoCurrentTime / this.videoTotalTime;
+            this.progressRate = this.videoTotalTime === 0 ? 0 : this.videoCurrentTime / this.videoTotalTime;
             this.progressDotLeft = this.progressLineRect!.width * this.progressRate;
 
             // 计算剪辑轨道时间帧的信息
             this.videoFrameInfo.left = this.videoCurrentTime / TIME_STEP * UNIT_LENGTH;
         },
         pauseCurrentVideo() {
-            if (!this.videoTracks.length || !this.currentVideo) {
-                return;
-            }
-
             this.isPlaying = false;
-            this.currentVideo.videoEl!.pause();
+            this.currentVideo?.videoEl?.pause();
             useAudioPlayStore().stopAudio();
 
             // 取消动画帧请求
@@ -174,13 +207,12 @@ export const useVideoPlayStore = defineStore('videoPlay', {
         },
         playNextVideo() {
             // 暂停当前视频
-            this.pauseCurrentVideo();
+            this.currentVideo?.videoEl?.pause();
             // 更新索引
             this.currentVideoIndex++;
             // 已播放完毕所有视频
             if (this.currentVideoIndex >= this.videoTracks.length) {
                 this.currentVideo = null;
-                this.isPlaying = false;
                 return;
             }
 
@@ -258,10 +290,10 @@ export const useVideoPlayStore = defineStore('videoPlay', {
                 prevTrack = track;
             });
 
-            // 给每个视频绑定video标签
-            await useVideoPlayStore().initVideoTracks();
             // 初始化音频
             await useAudioPlayStore().initAudioPlay();
+            // 给每个视频绑定video标签
+            await useVideoPlayStore().initVideoTracks();
         },
         async updateVideoTracks(newVideoTracks: VideoTrackInfo[], selectIndex: number = -1) {
             const { currentCutTask } = useCutTaskStore();

@@ -30,6 +30,15 @@ export const useAudioPlayStore = defineStore('audioPlay', {
             // 初始化Web Audio混音引擎
             this.initAudioEngine();
         },
+        destroy() {
+            this.activeAudioSources.forEach(source => {
+                source.node.stop(); // 停止音频源
+                source.node.disconnect(); // 断开连接，释放资源
+            });
+            this.audioTracks = [];
+            this.activeAudioSources = [];
+            this.audioPlayList = [];
+        },
         async fetchFromAudioTrack() {
             const audioPlayList = [];
             for (const track of this.audioTracks) {
